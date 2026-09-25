@@ -146,7 +146,7 @@ function install(map: MapLibre, theme: Theme) {
     layout: { 'text-field': ['get', 'initials'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 7.5, 13, 9.5, 16, 11.5], 'text-allow-overlap': true, 'text-ignore-placement': true },
     paint: { 'text-color': ['get', 'text'] } })
   map.addLayer({ id: 'daily-labels', type: 'symbol', source: 'daily', minzoom: 14.5,
-    layout: { 'text-field': ['get', 'chain'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, 1.35], 'text-anchor': 'top', 'text-optional': true, 'text-max-width': 8 },
+    layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, 1.35], 'text-anchor': 'top', 'text-optional': true, 'text-max-width': 8 },
     paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.6 } })
 
   map.addLayer({ id: 'rings', type: 'line', source: 'rings', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': c.ink, 'line-width': 1.5, 'line-dasharray': [2, 2], 'line-opacity': .75 } })
@@ -274,7 +274,8 @@ export default function MapView(props: MapViewProps) {
   function syncDaily() {
     source('daily')?.setData(collection(latest.current.dailyPlaces.map((place) => ({ type: 'Feature',
       properties: { kind: place.kind, chain: place.chain, name: place.name, color: place.color, text: textOn(place.color),
-        initials: place.chain === OTHER_CHAIN ? '' : initials(place.chain), independent: place.chain === OTHER_CHAIN },
+        initials: place.chain === OTHER_CHAIN ? '' : initials(place.chain), independent: place.chain === OTHER_CHAIN,
+        label: place.chain === OTHER_CHAIN ? place.name : place.chain },
       geometry: { type: 'Point', coordinates: place.coordinates } }))))
   }
 

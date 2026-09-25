@@ -62,14 +62,15 @@ export class GridIndex<T> {
 export type Bounds = [west: number, south: number, east: number, north: number]
 
 function cityBox([lon, lat]: Coordinates, half: number): Bounds {
-  const snappedLon = Math.round(lon * 20) / 20, snappedLat = Math.round(lat * 20) / 20
-  const dx = Math.min(1.5, half / Math.cos(snappedLat * rad))
-  return [Math.max(-180, snappedLon - dx), Math.max(-85, snappedLat - half), Math.min(180, snappedLon + dx), Math.min(85, snappedLat + half)]
+  const dx = Math.min(1.5, half / Math.cos(lat * rad))
+  return [Math.max(-180, lon - dx), Math.max(-85, lat - half), Math.min(180, lon + dx), Math.min(85, lat + half)]
 }
+
+const snapped = ([lon, lat]: Coordinates): Coordinates => [Math.round(lon * 20) / 20, Math.round(lat * 20) / 20]
 
 export const cityView = (center: Coordinates) => cityBox(center, .06)
 
-export const loadedArea = (center: Coordinates) => cityBox(center, .1)
+export const loadedArea = (center: Coordinates) => cityBox(snapped(center), .1)
 
 export const inBounds = ([lon, lat]: Coordinates, [west, south, east, north]: Bounds) => lon >= west && lon <= east && lat >= south && lat <= north
 
