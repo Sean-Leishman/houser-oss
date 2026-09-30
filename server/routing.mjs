@@ -7,6 +7,10 @@ const DAY = 86_400_000
 const costing = { walk: 'pedestrian', bike: 'bicycle', car: 'auto' }
 export const REACH_MINUTES = [15, 30, 45, 60]
 const BATCH = 50
+const HEIGHT_POINTS = 200
+// A DEM is noisy: metre-scale jitter along a flat road reads as climbing. Only commit a
+// change once it passes this, or a ride across the Thames valley claims hundreds of metres.
+const MIN_CLIMB = 2
 
 export const routingModes = Object.keys(costing)
 const key = ([lon, lat]) => `${lon.toFixed(4)},${lat.toFixed(4)}`
@@ -63,6 +67,26 @@ export function decodePolyline6(encoded) {
     coordinates.push([lon / 1e6, lat / 1e6])
   }
   return coordinates
+}
+
+export function sampleShape(coordinates, limit = HEIGHT_POINTS) {
+  if (coordinates.length <= limit) return coordinates
+  const step = (coordinates.length - 1) / (limit - 1)
+  return Array.from({ length: limit }, (_, index) => coordinates[Math.round(index * step)])
+}
+
+export function elevationChange(heights, minDelta = MIN_CLIMB) {
+  const known = heights.filter(Number.isFinite)
+  if (known.length < 2) return null
+  let ascent = 0, descent = 0, anchor = known[0]
+  for (const height of known.slice(1)) {
+    const delta = height - anchor
+    if (Math.abs(delta) < minDelta) continue
+    if (delta > 0) ascent += delta
+    else descent -= delta
+    anchor = height
+  }
+  return { ascent: Math.round(ascent), descent: Math.round(descent) }
 }
 
 export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'https://valhalla1.openstreetmap.de',
@@ -137,12 +161,26 @@ export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'ht
     return { ...result.data, updatedAt: result.updatedAt, stale: result.stale }
   }
 
+  async function climb(coordinates) {
+    // Only walking and cycling care about hills, and this doubles the calls to a shared
+    // routing server -- so it is not asked for a car. A height service without coverage
+    // answers nulls, which elevationChange reports as no data rather than as flat.
+    const data = await post('/height', { shape: sampleShape(coordinates).map((coordinate) => point(coordinate)) })
+    return Array.isArray(data.height) ? elevationChange(data.height) : null
+  }
+
   async function route({ mode, from, to }) {
     const result = await routeCache(`${mode}:${key(from)}:${key(to)}`, async () => {
       const data = await post('/route', { locations: [point(from), point(to)], costing: costing[mode], directions_type: 'none', units: 'kilometers' })
       const leg = data.trip?.legs?.[0]
       if (!leg?.shape || !Number.isFinite(data.trip.summary?.time)) throw new Error('Routing returned no route')
-      return { duration: data.trip.summary.time, distance: data.trip.summary.length, geometry: { type: 'LineString', coordinates: decodePolyline6(leg.shape) } }
+      const coordinates = decodePolyline6(leg.shape)
+      let elevation = null
+      if (mode !== 'car') {
+        try { elevation = await climb(coordinates) } catch { elevation = null }
+      }
+      return { duration: data.trip.summary.time, distance: data.trip.summary.length,
+        geometry: { type: 'LineString', coordinates }, ...(elevation ? { elevation } : {}) }
     })
     return { ...result.data, updatedAt: result.updatedAt }
   }

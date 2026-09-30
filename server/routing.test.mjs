@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { createRoutingService, decodePolyline6 } from './routing.mjs'
+import { createRoutingService, decodePolyline6, elevationChange, sampleShape } from './routing.mjs'
 
 const destination = [4.9117, 52.3773]
 const origins = Array.from({ length: 60 }, (_, index) => [4.85 + index * .001, 52.35])
@@ -20,6 +20,7 @@ function valhalla(requests) {
       return Response.json({ type: 'FeatureCollection', features: [30, 15].map((contour) => ({ type: 'Feature', properties: { contour, metric: 'time' },
         geometry: { type: 'Polygon', coordinates: [[[4.9, 52.37], [4.92, 52.37], [4.92, 52.39], [4.9, 52.37]]] } })) })
     }
+    if (new URL(url).pathname === '/height') return Response.json({ height: [10, 10.5, 24, 23, 12] })
     return Response.json({ trip: { summary: { time: 1221, length: 4.7 }, legs: [{ shape: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }] } })
   }
 }
@@ -81,4 +82,39 @@ test('reach areas keep polygons with their minutes, and routes decode their shap
 test('polyline6 decoding matches the reference example', () => {
   assert.deepEqual(decodePolyline6('_p~iF~ps|U_ulLnnqC_mqNvxq`@').map(([lon, lat]) => [lon * 10, lat * 10].map((value) => Number(value.toFixed(3)))),
     [[-120.2, 38.5], [-120.95, 40.7], [-126.453, 43.252]])
+})
+
+test('elevation ignores DEM jitter, reports no data rather than flat, and is not asked for a car', async () => {
+  const cacheDir = await mkdtemp(join(tmpdir(), 'houser-routing-'))
+  const requests = []
+  try {
+    const routing = createRoutingService({ cacheDir, fetchImpl: valhalla(requests), spacingMs: 0 })
+
+    const ride = await routing.route({ mode: 'bike', from: origins[0], to: destination })
+    assert.deepEqual(ride.elevation, { ascent: 14, descent: 12 }, '10 -> 10.5 is jitter and is not a climb')
+    assert.equal(requests.at(-1).path, '/height')
+    assert.equal(requests.at(-1).body.shape.length, 3)
+
+    const drive = await routing.route({ mode: 'car', from: origins[1], to: destination })
+    assert.equal(drive.elevation, undefined)
+    assert.equal(requests.at(-1).path, '/route', 'a car route asks for no heights')
+  } finally { await rm(cacheDir, { recursive: true, force: true }) }
+})
+
+test('elevation maths: jitter, gaps and missing coverage', () => {
+  assert.deepEqual(elevationChange([0, 1, 0, 1, 0]), { ascent: 0, descent: 0 }, 'sub-threshold wobble is not a hill')
+  assert.deepEqual(elevationChange([0, 30, 10]), { ascent: 30, descent: 20 })
+  assert.deepEqual(elevationChange([0, null, 30]), { ascent: 30, descent: 0 }, 'a gap is skipped, not treated as sea level')
+  assert.equal(elevationChange([null, null]), null, 'no coverage is no data, not flat')
+  assert.equal(elevationChange([12]), null)
+  assert.deepEqual(elevationChange([0, 1.5, 3], 1), { ascent: 3, descent: 0 }, 'the threshold is tunable')
+})
+
+test('a long shape is downsampled to a bounded number of height samples', () => {
+  const line = Array.from({ length: 5000 }, (_, index) => [index / 1000, 51])
+  const sampled = sampleShape(line)
+  assert.equal(sampled.length, 200)
+  assert.deepEqual(sampled[0], line[0])
+  assert.deepEqual(sampled.at(-1), line.at(-1), 'the far end of the route is still measured')
+  assert.equal(sampleShape(line.slice(0, 10)).length, 10)
 })
