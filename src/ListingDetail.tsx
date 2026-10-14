@@ -60,7 +60,7 @@ export default function ListingDetail({ busShown, listing, trip, route, mode, an
       <h3>Your trip</h3>
       {anchor && minutes != null
         ? <p className="trip-line"><ModeIcon size={18} aria-hidden /><span><strong>{routed ? '' : '≈ '}{minutes} min</strong> {modeVerbs[mode]} to {anchor.name}
-          {route && <small> · {route.distance.toFixed(1)} km</small>}
+          {route && <small> · {route.distance.toFixed(1)} km{route.elevation && ` · ↑${route.elevation.ascent} m ↓${route.elevation.descent} m`}</small>}
           {!routed && <small className="block">{mode === 'transit' ? 'Rough estimate from distance. Check the operator’s journey planner.' : 'Estimate from distance. Routed times cover the 500 homes nearest your place.'}</small>}</span></p>
         : <p className="muted">Add where you go every day to see trip times.</p>}
     </section>

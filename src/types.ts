@@ -118,6 +118,7 @@ export interface Route {
   duration: number
   distance: number
   geometry: LineString
+  elevation?: { ascent: number; descent: number }
 }
 
 export interface Trip {
