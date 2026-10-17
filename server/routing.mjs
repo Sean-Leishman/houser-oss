@@ -10,7 +10,9 @@ const BATCH = 50
 const HEIGHT_POINTS = 200
 // A DEM is noisy: metre-scale jitter along a flat road reads as climbing. Only commit a
 // change once it passes this, or a ride across the Thames valley claims hundreds of metres.
-const MIN_CLIMB = 2
+// At 2 m, Trafalgar Square -> Camden (13 to 53 m) read as 97 m of climb and moved with the
+// sample count; 5 m reads 50-65 m. ponytail: a fixed threshold, smooth the profile if it still drifts.
+const MIN_CLIMB = 5
 
 export const routingModes = Object.keys(costing)
 const key = ([lon, lat]) => `${lon.toFixed(4)},${lat.toFixed(4)}`
@@ -93,7 +95,7 @@ export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'ht
   clientId = process.env.VALHALLA_CLIENT_ID || 'houser', fetchImpl = fetch, cacheDir = join(process.cwd(), '.cache'),
   now = Date.now, spacingMs = 1100 } = {}) {
   const reachCache = createLocationCache({ namespace: 'reach-v1', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
-  const routeCache = createLocationCache({ namespace: 'route-v1', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
+  const routeCache = createLocationCache({ namespace: 'route-v2', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
   const tables = new Map()
   const post = createQueue({ baseUrl, label: 'Routing', headers: { 'X-Client-Id': clientId }, spacingMs, fetchImpl, now })
 

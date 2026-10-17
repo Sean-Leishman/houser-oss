@@ -49,7 +49,7 @@ The public Overpass and Valhalla servers are for light use. For a public deploym
 | `GET /api/transit?part=rail\|bus\|chains\|pois\|parks&lon=&lat=` | Rail or bus lines with stops, supermarkets and gyms, other places, or parks for an area |
 | `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, car) |
 | `GET /api/reach?mode=&lon=&lat=` | Areas reachable in 15, 30, 45 and 60 minutes |
-| `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry |
+| `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry, with metres of climb and descent for walk and bike |
 
 Caches live in `.cache/`.
 
