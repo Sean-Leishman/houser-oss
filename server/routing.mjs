@@ -10,9 +10,10 @@ const BATCH = 50
 const HEIGHT_POINTS = 200
 // A DEM is noisy: metre-scale jitter along a flat road reads as climbing. Only commit a
 // change once it passes this, or a ride across the Thames valley claims hundreds of metres.
-// At 2 m, Trafalgar Square -> Camden (13 to 53 m) read as 97 m of climb and moved with the
-// sample count; 5 m reads 50-65 m. ponytail: a fixed threshold, smooth the profile if it still drifts.
-const MIN_CLIMB = 5
+// Below 8 m the total moved with the sample count (Trafalgar Square -> Camden, 13 to 53 m:
+// 97 m of climb at 2 m, 46-66 m at 5 m, 42 m at 8 m). Median smoothing and Valhalla's
+// resample_distance did not steady it; the threshold did. Rolling ground under 8 m is not counted.
+const MIN_CLIMB = 8
 
 export const routingModes = Object.keys(costing)
 const key = ([lon, lat]) => `${lon.toFixed(4)},${lat.toFixed(4)}`
