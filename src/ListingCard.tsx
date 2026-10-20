@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Bike, CarFront, Dumbbell, Footprints, Heart, House, ShoppingBasket, TramFront } from 'lucide-react'
+import { Bike, CarFront, Dumbbell, Footprints, Heart, House, Leaf, ShoppingBasket, TramFront } from 'lucide-react'
 import { cardLines, dailyKinds, OTHER_CHAIN, type Access } from './access'
 import { formatDistance } from './geo'
 import { availability, listingFacts, money } from './format'
@@ -7,7 +7,7 @@ import LineBadge from './LineBadge'
 import type { Listing, TransitMode, TravelMode, Trip } from './types'
 import type { SavedStatus } from './storage'
 
-export const modeIcons = { walk: Footprints, bike: Bike, transit: TramFront, car: CarFront }
+export const modeIcons = { walk: Footprints, bike: Bike, quiet: Leaf, transit: TramFront, car: CarFront }
 export const placeIcons = { supermarket: ShoppingBasket, gym: Dumbbell }
 
 interface Props {

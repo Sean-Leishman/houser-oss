@@ -20,7 +20,7 @@ Put a listings file in `data/`, or write a connector and run `npm run homes:fetc
 ## Features
 
 - City search, limited to the countries you have homes for. The map opens on the city centre and stays inside the loaded area, about 22 km across.
-- A daily place, searched or picked on the map, with walk, bike, transit or car and a 15 to 60 minute limit. For walk, bike and car, areas beyond the limit are faded.
+- A daily place, searched or picked on the map, with walk, bike, quiet bike, transit or car and a 15 to 60 minute limit. For every mode but transit, areas beyond the limit are faded. Quiet keeps to minor roads and cycleways where it can; a bike trip shows both routes with their share on main roads.
 - Home cards with rent, details, trip time, nearest lines and stops, and nearest supermarket and gym.
 - Filters for rent, rooms, type, homes near a line, and homes within a 10-minute walk of a chosen supermarket or gym chain.
 - Map layers for rail, metro, tram and bus lines, shops, food, sports, health, schools, parks, and supermarket and gym chains.
@@ -47,9 +47,9 @@ The public Overpass and Valhalla servers are for light use. For a public deploym
 | `GET /api/listings?city=&lon=&lat=` | Homes in the city's loaded area, with a count per source |
 | `GET /api/sources` | Each file in `data/` with its homes, skipped entries and countries |
 | `GET /api/transit?part=rail\|bus\|chains\|pois\|parks&lon=&lat=` | Rail or bus lines with stops, supermarkets and gyms, other places, or parks for an area |
-| `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, car) |
+| `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, quiet, car) |
 | `GET /api/reach?mode=&lon=&lat=` | Areas reachable in 15, 30, 45 and 60 minutes |
-| `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry, with metres of climb and descent for walk and bike |
+| `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry, with metres of climb and descent for walk and bike, and the share on main roads for bike and quiet |
 
 Caches live in `.cache/`.
 

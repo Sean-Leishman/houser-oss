@@ -31,6 +31,7 @@ export interface MapViewProps {
   reach: ReachArea | null
   minutes: ReachMinutes
   route: Route | null
+  altRoute: Route | null
   transit: TransitData | null
   dailyPlaces: ChainMarker[]
   parks: ParkPolygon[] | null
@@ -114,8 +115,10 @@ function install(map: MapLibre, theme: Theme) {
     'line-color': ['get', 'color'],
     'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['match', ['get', 'mode'], 'bus', .7, 'tram', 1.3, 1.8], 16, ['match', ['get', 'mode'], 'bus', 2.4, 'tram', 3.6, 4.6]],
   } })
-  map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.paper, 'line-width': 8 } })
-  map.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.accent, 'line-width': 4 } })
+  map.addLayer({ id: 'route-alt', type: 'line', source: 'route', filter: ['==', ['get', 'alt'], true], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': c.ink, 'line-width': 3, 'line-opacity': .55, 'line-dasharray': [1.5, 1.5] } })
+  map.addLayer({ id: 'route-casing', type: 'line', source: 'route', filter: ['!=', ['get', 'alt'], true], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.paper, 'line-width': 8 } })
+  map.addLayer({ id: 'route', type: 'line', source: 'route', filter: ['!=', ['get', 'alt'], true], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.accent, 'line-width': 4 } })
   map.addLayer({ id: 'stops-bus', type: 'circle', source: 'stops', minzoom: 15, filter: ['==', ['get', 'rail'], false],
     paint: { 'circle-radius': 3, 'circle-color': c.paper, 'circle-stroke-color': c.ink, 'circle-stroke-width': 1, 'circle-stroke-opacity': .6 } })
   map.addLayer({ id: 'stops-rail', type: 'circle', source: 'stops', minzoom: 11.5, filter: ['==', ['get', 'rail'], true],
@@ -280,8 +283,9 @@ export default function MapView(props: MapViewProps) {
   }
 
   function syncRoute() {
-    const { route } = latest.current
-    source('route')?.setData(collection(route ? [{ type: 'Feature', properties: {}, geometry: route.geometry }] : []))
+    const { route, altRoute } = latest.current
+    source('route')?.setData(collection([...(altRoute ? [{ type: 'Feature' as const, properties: { alt: true }, geometry: altRoute.geometry }] : []),
+      ...(route ? [{ type: 'Feature' as const, properties: {}, geometry: route.geometry }] : [])]))
   }
 
   function syncParks() {
@@ -434,7 +438,7 @@ export default function MapView(props: MapViewProps) {
   useEffect(() => { if (ready.current) { syncParks(); syncLayers() } }, [props.parks])
   useEffect(() => { if (ready.current) syncLayers() }, [props.lineModes, props.places, props.lineFilter, props.selected])
   useEffect(() => { if (ready.current) syncReach() }, [props.reach, props.minutes])
-  useEffect(() => { if (ready.current) syncRoute() }, [props.route])
+  useEffect(() => { if (ready.current) syncRoute() }, [props.route, props.altRoute])
   useEffect(() => { if (ready.current) syncDaily() }, [props.dailyPlaces])
 
   useEffect(() => {

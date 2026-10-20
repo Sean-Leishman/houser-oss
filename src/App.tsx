@@ -3,7 +3,7 @@ import { ArrowUpRight, Crosshair, Info, MapPin, Pencil, RefreshCw, X } from 'luc
 import { accessForListings, chainColor, dailyKinds, indexTransit, nearLine, shownPlaces, type PlaceChoices } from './access'
 import { fetchChains, fetchCoverage, fetchLines, fetchListings, fetchParks, fetchPois, fetchReach, fetchRoute, fetchTrips, placeAt } from './api'
 import { distanceKm, estimateMinutes, inBounds, loadedArea, walkingMinutes } from './geo'
-import { kindLabels, modeLabels, modeVerbs, money, timeAgo } from './format'
+import { altModes, kindLabels, modeLabels, modeVerbs, money, timeAgo } from './format'
 import { REACH_OPTIONS, placeCategories, transitModes, type PlaceCategory, type ReachMinutes } from './layers'
 import LayerLegend from './LayerLegend'
 import LineBadge from './LineBadge'
@@ -20,7 +20,7 @@ const MapView = lazy(() => mapModule)
 const noLines: LineSet = { features: [], stops: [] }
 
 const ZURICH: Place = { id: 'default-zurich', name: 'Zürich', detail: 'Zurich, Switzerland', coordinates: [8.5417, 47.3769], city: 'Zürich', countryCode: 'CH' }
-const travelModes: TravelMode[] = ['walk', 'bike', 'transit', 'car']
+const travelModes: TravelMode[] = ['walk', 'bike', 'quiet', 'transit', 'car']
 const listingKinds: ListingKind[] = ['room', 'studio', 'apartment', 'house']
 type Sort = 'trip' | 'rent' | 'size' | 'rail'
 const sorts: { id: Sort, label: string }[] = [{ id: 'trip', label: 'Shortest trip' }, { id: 'rent', label: 'Lowest rent' }, { id: 'size', label: 'Most space' }, { id: 'rail', label: 'Nearest rail' }]
@@ -80,6 +80,7 @@ export default function App() {
   const [tripsLoading, setTripsLoading] = useState(false)
   const [reach, setReach] = useState<ReachArea | null>(null)
   const [route, setRoute] = useState<Route | null>(null)
+  const [altRoute, setAltRoute] = useState<Route | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [lineFilter, setLineFilter] = useState<number | null>(null)
@@ -200,9 +201,13 @@ export default function App() {
 
   useEffect(() => {
     setRoute(null)
+    setAltRoute(null)
     if (!selected || !anchor || mode === 'transit') return
     const controller = new AbortController()
     fetchRoute(mode, selected.coordinates, anchor.coordinates, controller.signal).then(setRoute).catch(() => {})
+    // A bike trip shows the other bike setting too, so fast and quiet can be compared on one card.
+    const other = altModes[mode]
+    if (other) fetchRoute(other, selected.coordinates, anchor.coordinates, controller.signal).then(setAltRoute).catch(() => {})
     return () => controller.abort()
   }, [selected?.id, anchorKey, mode])
 
@@ -359,7 +364,7 @@ export default function App() {
       </header>
 
       <div className="panel-scroll" ref={scroller}>
-        {selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
+        {selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} altRoute={altRoute} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
           saved={saved[selected.id]} onBack={closeDetail} onToggleSave={toggleSaved} onUpdateSaved={updateSaved} />
           : <>
             <section className="trip" aria-labelledby="trip-title">
@@ -444,7 +449,7 @@ export default function App() {
     <main className="map-wrap">
       <Suspense fallback={<div className="map" />}>
         <MapView theme={dark ? 'dark' : 'light'} city={city} listings={tab === 'saved' ? savedListings : visible} savedIds={savedIds}
-          selected={selected} hoverId={hoverId} anchor={anchor} reach={reach} minutes={minutes} route={route} transit={transit} dailyPlaces={dailyPlaces}
+          selected={selected} hoverId={hoverId} anchor={anchor} reach={reach} minutes={minutes} route={route} altRoute={altRoute} transit={transit} dailyPlaces={dailyPlaces}
           parks={parks} lineModes={lineModes} places={places} lineFilter={lineFilter} picking={picking} bottomInset={isMobile ? sheetHeight : 0}
           onSelect={selectListing} onHover={setHoverId} onPick={(at) => { nameAnchor(at); setPicking(false) }} onAnchorMove={nameAnchor}
           onLineFilter={(index) => { setLineFilter(index); setTab('homes'); setSelectedId(null) }} />

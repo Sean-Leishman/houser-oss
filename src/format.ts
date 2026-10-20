@@ -1,4 +1,4 @@
-import type { Listing, ListingKind, TravelMode } from './types'
+import type { Listing, ListingKind, Route, TravelMode } from './types'
 
 const currencyFormats = new Map<string, Intl.NumberFormat>()
 export function money(value: number, currency = 'EUR') {
@@ -18,8 +18,13 @@ export function timeAgo(timestamp: number | string | null | undefined, now = Dat
 }
 
 export const kindLabels: Record<ListingKind, string> = { room: 'Room', studio: 'Studio', apartment: 'Apartment', house: 'House' }
-export const modeLabels: Record<TravelMode, string> = { walk: 'Walk', bike: 'Bike', transit: 'Transit', car: 'Car' }
-export const modeVerbs: Record<TravelMode, string> = { walk: 'on foot', bike: 'by bike', transit: 'by transit', car: 'by car' }
+export const modeLabels: Record<TravelMode, string> = { walk: 'Walk', bike: 'Bike', quiet: 'Quiet', transit: 'Transit', car: 'Car' }
+export const routeFacts = (route: Route) => ` · ${route.distance.toFixed(1)} km`
+  + (route.elevation ? ` · ↑${route.elevation.ascent} m ↓${route.elevation.descent} m` : '')
+  + (route.mainRoads != null ? ` · ${Math.round(route.mainRoads * 100)}% on main roads` : '')
+
+export const altModes: Partial<Record<TravelMode, 'bike' | 'quiet'>> = { bike: 'quiet', quiet: 'bike' }
+export const modeVerbs: Record<TravelMode, string> = { walk: 'on foot', bike: 'by bike', quiet: 'by bike on quiet roads', transit: 'by transit', car: 'by car' }
 
 export const roomsLabel = (rooms: number) => `${Math.floor(rooms) || ''}${rooms % 1 ? '½' : ''} room${rooms > 1 ? 's' : ''}`
 

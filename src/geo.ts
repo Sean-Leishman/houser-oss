@@ -14,6 +14,7 @@ export function estimateMinutes(from: Coordinates, to: Coordinates, mode: Travel
   switch (mode) {
     case 'walk': return Math.max(1, Math.round(km / 4.8 * 60))
     case 'bike': return Math.max(2, Math.round(km / 15 * 60 + 2))
+    case 'quiet': return Math.max(2, Math.round(km * 1.1 / 15 * 60 + 2))
     case 'car': return Math.max(4, Math.round(km / 25 * 60 + 6))
     case 'transit': return Math.max(6, Math.round(km / 18 * 60 + 9))
   }

@@ -4,7 +4,12 @@ import { join } from 'node:path'
 import { createLocationCache, readJson, USER_AGENT } from './cache.mjs'
 
 const DAY = 86_400_000
-const costing = { walk: 'pedestrian', bike: 'bicycle', car: 'auto' }
+// Quiet is Valhalla's bicycle costing with its strongest preference for minor roads and cycleways.
+// On four London commutes it cut the main-road share from 89% to 41% (Peckham -> Waterloo) and
+// 99% to 68% (Dalston -> King's Cross) for one or two minutes, and changed nothing on the other two.
+const costing = { walk: { costing: 'pedestrian' }, bike: { costing: 'bicycle' },
+  quiet: { costing: 'bicycle', costing_options: { bicycle: { use_roads: 0 } } }, car: { costing: 'auto' } }
+const MAIN_ROADS = new Set(['motorway', 'trunk', 'primary', 'secondary'])
 export const REACH_MINUTES = [15, 30, 45, 60]
 const BATCH = 50
 const HEIGHT_POINTS = 200
@@ -96,13 +101,13 @@ export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'ht
   clientId = process.env.VALHALLA_CLIENT_ID || 'houser', fetchImpl = fetch, cacheDir = join(process.cwd(), '.cache'),
   now = Date.now, spacingMs = 1100 } = {}) {
   const reachCache = createLocationCache({ namespace: 'reach-v1', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
-  const routeCache = createLocationCache({ namespace: 'route-v2', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
+  const routeCache = createLocationCache({ namespace: 'route-v3', ttlMs: 7 * DAY, staleMs: 30 * DAY, cacheDir, now })
   const tables = new Map()
   const post = createQueue({ baseUrl, label: 'Routing', headers: { 'X-Client-Id': clientId }, spacingMs, fetchImpl, now })
 
   async function streetTimes(mode, to, batch) {
     const data = await post('/sources_to_targets', { sources: batch.map((item) => point(item.split(',').map(Number))),
-      targets: [point(to)], costing: costing[mode], units: 'kilometers' })
+      targets: [point(to)], ...costing[mode], units: 'kilometers' })
     if (!Array.isArray(data.sources_to_targets)) throw new Error('Routing returned an invalid matrix')
     return batch.map((_, index) => {
       const cell = data.sources_to_targets[index]?.[0]
@@ -155,7 +160,7 @@ export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'ht
 
   async function reach({ mode, at }) {
     const result = await reachCache(`${mode}:${key(at)}`, async () => {
-      const data = await post('/isochrone', { locations: [point(at)], costing: costing[mode], contours: REACH_MINUTES.map((time) => ({ time })),
+      const data = await post('/isochrone', { locations: [point(at)], ...costing[mode], contours: REACH_MINUTES.map((time) => ({ time })),
         polygons: true, denoise: .3, generalize: 50 })
       if (!Array.isArray(data.features)) throw new Error('Routing returned an invalid reach area')
       return { type: 'FeatureCollection', features: data.features.filter((feature) => /Polygon$/.test(feature.geometry?.type))
@@ -172,18 +177,34 @@ export function createRoutingService({ baseUrl = process.env.VALHALLA_URL || 'ht
     return Array.isArray(data.height) ? elevationChange(data.height) : null
   }
 
+  async function mainRoads(mode, shape) {
+    // Share of the distance on A and B roads (trunk, primary, secondary) not ridden on a cycleway.
+    const data = await post('/trace_attributes', { encoded_polyline: shape, ...costing[mode], shape_match: 'edge_walk',
+      filters: { attributes: ['edge.road_class', 'edge.length', 'edge.use'], action: 'include' } })
+    if (!Array.isArray(data.edges)) return null
+    let total = 0, main = 0
+    for (const edge of data.edges) {
+      total += edge.length || 0
+      if (MAIN_ROADS.has(edge.road_class) && edge.use !== 'cycleway') main += edge.length || 0
+    }
+    return total > 0 ? Math.round(main / total * 100) / 100 : null
+  }
+
   async function route({ mode, from, to }) {
     const result = await routeCache(`${mode}:${key(from)}:${key(to)}`, async () => {
-      const data = await post('/route', { locations: [point(from), point(to)], costing: costing[mode], directions_type: 'none', units: 'kilometers' })
+      const data = await post('/route', { locations: [point(from), point(to)], ...costing[mode], directions_type: 'none', units: 'kilometers' })
       const leg = data.trip?.legs?.[0]
       if (!leg?.shape || !Number.isFinite(data.trip.summary?.time)) throw new Error('Routing returned no route')
       const coordinates = decodePolyline6(leg.shape)
-      let elevation = null
+      let elevation = null, main = null
       if (mode !== 'car') {
         try { elevation = await climb(coordinates) } catch { elevation = null }
       }
+      if (costing[mode].costing === 'bicycle') {
+        try { main = await mainRoads(mode, leg.shape) } catch { main = null }
+      }
       return { duration: data.trip.summary.time, distance: data.trip.summary.length,
-        geometry: { type: 'LineString', coordinates }, ...(elevation ? { elevation } : {}) }
+        geometry: { type: 'LineString', coordinates }, ...(elevation ? { elevation } : {}), ...(main != null ? { mainRoads: main } : {}) }
     })
     return { ...result.data, updatedAt: result.updatedAt }
   }

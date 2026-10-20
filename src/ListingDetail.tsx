@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Heart } from 'lucide-react'
 import { dailyKinds, nearbyStops, nearestChains, OTHER_CHAIN, type AccessIndex, type PlaceChoices } from './access'
 import { formatDistance, walkingMinutes } from './geo'
-import { availability, homeRooms, kindLabels, money, modeVerbs, roomsLabel, timeAgo } from './format'
+import { altModes, availability, homeRooms, kindLabels, modeLabels, money, modeVerbs, routeFacts, roomsLabel, timeAgo } from './format'
 import LineBadge from './LineBadge'
 import { modeIcons, placeIcons } from './ListingCard'
 import { savedStatuses, type SavedHome, type SavedStatus } from './storage'
@@ -12,6 +12,7 @@ interface Props {
   listing: Listing
   trip: Trip | null
   route: Route | null
+  altRoute: Route | null
   mode: TravelMode
   anchor: Place | null
   accessIndex: AccessIndex | null
@@ -22,7 +23,7 @@ interface Props {
   onUpdateSaved: (id: string, change: { status?: SavedStatus, note?: string }) => void
 }
 
-export default function ListingDetail({ busShown, listing, trip, route, mode, anchor, accessIndex, choices, saved, onBack, onToggleSave, onUpdateSaved }: Props) {
+export default function ListingDetail({ busShown, listing, trip, route, altRoute, mode, anchor, accessIndex, choices, saved, onBack, onToggleSave, onUpdateSaved }: Props) {
   const ModeIcon = modeIcons[mode]
   const stops = accessIndex ? nearbyStops(listing.coordinates, accessIndex) : []
   const daily = !accessIndex ? [] : dailyKinds.flatMap((kind) =>
@@ -60,7 +61,8 @@ export default function ListingDetail({ busShown, listing, trip, route, mode, an
       <h3>Your trip</h3>
       {anchor && minutes != null
         ? <p className="trip-line"><ModeIcon size={18} aria-hidden /><span><strong>{routed ? '' : '≈ '}{minutes} min</strong> {modeVerbs[mode]} to {anchor.name}
-          {route && <small> · {route.distance.toFixed(1)} km{route.elevation && ` · ↑${route.elevation.ascent} m ↓${route.elevation.descent} m`}</small>}
+          {route && <small>{routeFacts(route)}</small>}
+          {altRoute && <small className="block">{modeLabels[altModes[mode]!]} route: {Math.round(altRoute.duration / 60)} min{routeFacts(altRoute)} (dashed on the map)</small>}
           {!routed && <small className="block">{mode === 'transit' ? 'Rough estimate from distance. Check the operator’s journey planner.' : 'Estimate from distance. Routed times cover the 500 homes nearest your place.'}</small>}</span></p>
         : <p className="muted">Add where you go every day to see trip times.</p>}
     </section>

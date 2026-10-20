@@ -21,6 +21,7 @@ function valhalla(requests) {
         geometry: { type: 'Polygon', coordinates: [[[4.9, 52.37], [4.92, 52.37], [4.92, 52.39], [4.9, 52.37]]] } })) })
     }
     if (new URL(url).pathname === '/height') return Response.json({ height: [10, 10.5, 24, 23, 12] })
+    if (new URL(url).pathname === '/trace_attributes') return Response.json({ edges: [{ road_class: 'primary', length: 1 }, { road_class: 'primary', use: 'cycleway', length: 1 }, { road_class: 'residential', length: 2 }] })
     return Response.json({ trip: { summary: { time: 1221, length: 4.7 }, legs: [{ shape: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }] } })
   }
 }
@@ -92,12 +93,31 @@ test('elevation ignores DEM jitter, reports no data rather than flat, and is not
 
     const ride = await routing.route({ mode: 'bike', from: origins[0], to: destination })
     assert.deepEqual(ride.elevation, { ascent: 14, descent: 12 }, '10 -> 10.5 is jitter and is not a climb')
-    assert.equal(requests.at(-1).path, '/height')
-    assert.equal(requests.at(-1).body.shape.length, 3)
+    assert.equal(requests.find((request) => request.path === '/height').body.shape.length, 3)
 
     const drive = await routing.route({ mode: 'car', from: origins[1], to: destination })
     assert.equal(drive.elevation, undefined)
     assert.equal(requests.at(-1).path, '/route', 'a car route asks for no heights')
+  } finally { await rm(cacheDir, { recursive: true, force: true }) }
+})
+
+test('quiet bike routes ask Valhalla to avoid roads and report the main-road share; cars do not', async () => {
+  const cacheDir = await mkdtemp(join(tmpdir(), 'houser-routing-'))
+  const requests = []
+  try {
+    const routing = createRoutingService({ cacheDir, fetchImpl: valhalla(requests), spacingMs: 0 })
+    const quiet = await routing.route({ mode: 'quiet', from: origins[0], to: destination })
+    const asked = requests.find((request) => request.path === '/route')
+    assert.equal(asked.body.costing, 'bicycle')
+    assert.equal(asked.body.costing_options.bicycle.use_roads, 0)
+    assert.equal(quiet.mainRoads, .25, 'a cycleway along a primary road is not riding on the main road')
+    assert.equal(requests.at(-1).body.costing_options.bicycle.use_roads, 0, 'the trace is matched with the same costing')
+
+    await routing.durations({ mode: 'quiet', to: destination, from: origins.slice(0, 2) })
+    assert.equal(requests.at(-1).body.costing_options.bicycle.use_roads, 0)
+
+    const drive = await routing.route({ mode: 'car', from: origins[1], to: destination })
+    assert.equal(drive.mainRoads, undefined)
   } finally { await rm(cacheDir, { recursive: true, force: true }) }
 })
 

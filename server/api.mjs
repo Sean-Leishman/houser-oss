@@ -94,7 +94,7 @@ export async function handleApi(request, response) {
       let input = null
       try { input = body && JSON.parse(body.toString('utf8')) } catch {}
       if (!input || !routingModes.includes(input.mode) || !validPoint(input.to) || !Array.isArray(input.from) || input.from.length > 500 || !input.from.every(validPoint)) {
-        sendJson(response, 400, { error: 'Provide a walk, bike or car mode, one destination and up to 500 origins' })
+        sendJson(response, 400, { error: 'Provide a walk, bike, quiet or car mode, one destination and up to 500 origins' })
       } else sendJson(response, 200, await routing.durations(input), request)
       return true
     }
@@ -102,7 +102,7 @@ export async function handleApi(request, response) {
     if (url.pathname === '/api/reach' && request.method === 'GET') {
       const mode = params.get('mode')
       const at = coordinate(`${params.get('lon')},${params.get('lat')}`)
-      if (!routingModes.includes(mode) || !at) sendJson(response, 400, { error: 'Provide a walk, bike or car mode and a location' })
+      if (!routingModes.includes(mode) || !at) sendJson(response, 400, { error: 'Provide a walk, bike, quiet or car mode and a location' })
       else sendJson(response, 200, await routing.reach({ mode, at }), request)
       return true
     }
@@ -110,7 +110,7 @@ export async function handleApi(request, response) {
     if (url.pathname === '/api/route' && request.method === 'GET') {
       const mode = params.get('mode')
       const from = coordinate(params.get('from')), to = coordinate(params.get('to'))
-      if (!routingModes.includes(mode) || !from || !to) sendJson(response, 400, { error: 'Provide a walk, bike or car mode, an origin and a destination' })
+      if (!routingModes.includes(mode) || !from || !to) sendJson(response, 400, { error: 'Provide a walk, bike, quiet or car mode, an origin and a destination' })
       else sendJson(response, 200, await routing.route({ mode, from, to }), request)
       return true
     }

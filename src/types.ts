@@ -1,7 +1,7 @@
 import type { Feature, FeatureCollection, LineString, MultiLineString, MultiPolygon, Polygon } from 'geojson'
 
 export type Coordinates = [longitude: number, latitude: number]
-export type TravelMode = 'walk' | 'bike' | 'transit' | 'car'
+export type TravelMode = 'walk' | 'bike' | 'quiet' | 'transit' | 'car'
 export type TransitMode = 'train' | 'metro' | 'tram' | 'bus'
 export type ListingKind = 'room' | 'studio' | 'apartment' | 'house'
 
@@ -119,6 +119,7 @@ export interface Route {
   distance: number
   geometry: LineString
   elevation?: { ascent: number; descent: number }
+  mainRoads?: number
 }
 
 export interface Trip {
