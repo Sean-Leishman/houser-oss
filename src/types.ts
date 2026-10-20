@@ -122,6 +122,13 @@ export interface Route {
   mainRoads?: number
 }
 
+export interface JourneySlot {
+  id: string
+  label: string
+  direction: 'there' | 'home'
+  journey: { arrive: string; door: number; wait: number; walk: number; ride: number; lines: string[] } | null
+}
+
 export interface Trip {
   minutes: number
   km?: number | null

@@ -5,7 +5,7 @@ import { altModes, availability, homeRooms, kindLabels, modeLabels, money, modeV
 import LineBadge from './LineBadge'
 import { modeIcons, placeIcons } from './ListingCard'
 import { savedStatuses, type SavedHome, type SavedStatus } from './storage'
-import type { Listing, Place, Route, TravelMode, Trip } from './types'
+import type { JourneySlot, Listing, Place, Route, TravelMode, Trip } from './types'
 
 interface Props {
   busShown: boolean
@@ -13,6 +13,7 @@ interface Props {
   trip: Trip | null
   route: Route | null
   altRoute: Route | null
+  journeys: JourneySlot[] | null
   mode: TravelMode
   anchor: Place | null
   accessIndex: AccessIndex | null
@@ -23,7 +24,7 @@ interface Props {
   onUpdateSaved: (id: string, change: { status?: SavedStatus, note?: string }) => void
 }
 
-export default function ListingDetail({ busShown, listing, trip, route, altRoute, mode, anchor, accessIndex, choices, saved, onBack, onToggleSave, onUpdateSaved }: Props) {
+export default function ListingDetail({ busShown, listing, trip, route, altRoute, journeys, mode, anchor, accessIndex, choices, saved, onBack, onToggleSave, onUpdateSaved }: Props) {
   const ModeIcon = modeIcons[mode]
   const stops = accessIndex ? nearbyStops(listing.coordinates, accessIndex) : []
   const daily = !accessIndex ? [] : dailyKinds.flatMap((kind) =>
@@ -66,6 +67,16 @@ export default function ListingDetail({ busShown, listing, trip, route, altRoute
           {!routed && <small className="block">{mode === 'transit' ? 'Rough estimate from distance. Check the operator’s journey planner.' : 'Estimate from distance. Routed times cover the 500 homes nearest your place.'}</small>}</span></p>
         : <p className="muted">Add where you go every day to see trip times.</p>}
     </section>
+
+    {anchor && journeys?.some((slot) => slot.journey) && <section className="detail-section">
+      <h3>By public transport</h3>
+      <ul className="stop-list">{journeys.map(({ id, label, direction, journey }) => <li key={id}>
+        <span>{label} · {direction === 'there' ? `to ${anchor.name}` : 'home'}
+          {journey && <small className="block">{journey.wait} min wait · {journey.walk} walk · {journey.ride} ride{journey.lines.length > 0 && ` · ${journey.lines.join(', ')}`}</small>}</span>
+        <span>{journey ? <><strong>{journey.door} min</strong><small className="block">arrive {journey.arrive}</small></> : <small>No journey</small>}</span>
+      </li>)}</ul>
+      <small className="muted">Door to door from TfL, National Rail included, for the coming week.</small>
+    </section>}
 
     {stops.length > 0 && <section className="detail-section">
       <h3>Transit nearby</h3>

@@ -34,7 +34,7 @@ Put a listings file in `data/`, or write a connector and run `npm run homes:fetc
 | Base map | [OpenFreeMap](https://openfreemap.org) |
 | Lines, stops, places, parks | OpenStreetMap via [Overpass](https://wiki.openstreetmap.org/wiki/Overpass_API), cached 7 days |
 | Walk, bike and car times, reach areas, routes | [Valhalla](https://github.com/valhalla/valhalla) on the FOSSGIS demo server, cached 7 days |
-| Transit times | Estimated from distance, shown with "≈" |
+| Transit times | Estimated from distance, shown with "≈". In Great Britain, a home's card also shows door-to-door journeys at four times of day from the [TfL Journey Planner](https://api-portal.tfl.gov.uk), National Rail included, cached 7 days |
 
 Walk, bike and car times are routed for the 500 homes nearest the daily place and estimated for the rest.
 
@@ -49,6 +49,7 @@ The public Overpass and Valhalla servers are for light use. For a public deploym
 | `GET /api/transit?part=rail\|bus\|chains\|pois\|parks&lon=&lat=` | Rail or bus lines with stops, supermarkets and gyms, other places, or parks for an area |
 | `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, quiet, car) |
 | `GET /api/reach?mode=&lon=&lat=` | Areas reachable in 15, 30, 45 and 60 minutes |
+| `GET /api/journeys?from=lon,lat&to=lon,lat` | Public transport from a home to a daily place on a weekday at 08:30, and back home at 22:00, 01:30 on a weekday night and 01:30 on Friday night: arrival, wait, walk, ride and lines |
 | `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry, with metres of climb and descent for walk and bike, and the share on main roads for bike and quiet |
 
 Caches live in `.cache/`.

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight, Crosshair, Info, MapPin, Pencil, RefreshCw, X } from 'lucide-react'
 import { accessForListings, chainColor, dailyKinds, indexTransit, nearLine, shownPlaces, type PlaceChoices } from './access'
-import { fetchChains, fetchCoverage, fetchLines, fetchListings, fetchParks, fetchPois, fetchReach, fetchRoute, fetchTrips, placeAt } from './api'
+import { fetchChains, fetchCoverage, fetchJourneys, fetchLines, fetchListings, fetchParks, fetchPois, fetchReach, fetchRoute, fetchTrips, placeAt } from './api'
 import { distanceKm, estimateMinutes, inBounds, loadedArea, walkingMinutes } from './geo'
 import { altModes, kindLabels, modeLabels, modeVerbs, money, timeAgo } from './format'
 import { REACH_OPTIONS, placeCategories, transitModes, type PlaceCategory, type ReachMinutes } from './layers'
@@ -13,7 +13,7 @@ import { mergeNetwork } from './network'
 import PlaceSearch from './PlaceSearch'
 import Popover from './Popover'
 import { savedStatuses, useSavedHomes, useStoredState, type SavedStatus } from './storage'
-import type { Coordinates, DailyPlace, HousingSource, LineSet, Listing, ListingKind, ParkPolygon, Place, Poi, ReachArea, Route, TransitMode, TravelMode, Trip } from './types'
+import type { Coordinates, DailyPlace, HousingSource, JourneySlot, LineSet, Listing, ListingKind, ParkPolygon, Place, Poi, ReachArea, Route, TransitMode, TravelMode, Trip } from './types'
 
 const mapModule = import('./MapView')
 const MapView = lazy(() => mapModule)
@@ -81,6 +81,7 @@ export default function App() {
   const [reach, setReach] = useState<ReachArea | null>(null)
   const [route, setRoute] = useState<Route | null>(null)
   const [altRoute, setAltRoute] = useState<Route | null>(null)
+  const [journeys, setJourneys] = useState<JourneySlot[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [lineFilter, setLineFilter] = useState<number | null>(null)
@@ -210,6 +211,15 @@ export default function App() {
     if (other) fetchRoute(other, selected.coordinates, anchor.coordinates, controller.signal).then(setAltRoute).catch(() => {})
     return () => controller.abort()
   }, [selected?.id, anchorKey, mode])
+
+  useEffect(() => {
+    setJourneys(null)
+    // TfL plans London journeys, National Rail included; elsewhere transit stays a distance estimate.
+    if (!selected || !anchor || city.countryCode !== 'GB') return
+    const controller = new AbortController()
+    fetchJourneys(selected.coordinates, anchor.coordinates, controller.signal).then((result) => setJourneys(result.slots)).catch(() => {})
+    return () => controller.abort()
+  }, [selected?.id, anchorKey, city.countryCode])
 
   const accessIndex = useMemo(() => transit ? indexTransit(transit) : null, [transit])
   const access = useMemo(() => accessForListings(housing.listings, accessIndex, placeChoices), [housing.listings, accessIndex, placeChoices])
@@ -364,7 +374,7 @@ export default function App() {
       </header>
 
       <div className="panel-scroll" ref={scroller}>
-        {selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} altRoute={altRoute} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
+        {selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} altRoute={altRoute} journeys={journeys} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
           saved={saved[selected.id]} onBack={closeDetail} onToggleSave={toggleSaved} onUpdateSaved={updateSaved} />
           : <>
             <section className="trip" aria-labelledby="trip-title">

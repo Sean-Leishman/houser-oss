@@ -1,4 +1,4 @@
-import type { Coordinates, Coverage, DailyPlace, HousingResponse, LineSet, ParkPolygon, Place, Poi, ReachArea, Route, TravelMode } from './types'
+import type { Coordinates, Coverage, DailyPlace, HousingResponse, JourneySlot, LineSet, ParkPolygon, Place, Poi, ReachArea, Route, TravelMode } from './types'
 
 async function getJson<T>(url: URL | string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -58,6 +58,13 @@ export function fetchRoute(mode: Exclude<TravelMode, 'transit'>, from: Coordinat
   url.searchParams.set('from', from.join(','))
   url.searchParams.set('to', to.join(','))
   return getJson<Route>(url, { signal })
+}
+
+export function fetchJourneys(from: Coordinates, to: Coordinates, signal: AbortSignal) {
+  const url = api('/api/journeys')
+  url.searchParams.set('from', from.join(','))
+  url.searchParams.set('to', to.join(','))
+  return getJson<{ slots: JourneySlot[] }>(url, { signal })
 }
 
 interface PhotonFeature {

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
+import { createJourneyService } from './journeys.mjs'
 import { createListingService } from './listings.mjs'
 import { createRoutingService, routingModes, validPoint } from './routing.mjs'
 import { createTransitService, transitParts } from './transit.mjs'
@@ -10,6 +11,7 @@ if (existsSync('.env')) process.loadEnvFile('.env')
 const homes = createListingService()
 const getTransit = createTransitService()
 const routing = createRoutingService()
+const journeys = createJourneyService()
 
 function sendJson(response, status, body, request) {
   const json = JSON.stringify(body)
@@ -104,6 +106,13 @@ export async function handleApi(request, response) {
       const at = coordinate(`${params.get('lon')},${params.get('lat')}`)
       if (!routingModes.includes(mode) || !at) sendJson(response, 400, { error: 'Provide a walk, bike, quiet or car mode and a location' })
       else sendJson(response, 200, await routing.reach({ mode, at }), request)
+      return true
+    }
+
+    if (url.pathname === '/api/journeys' && request.method === 'GET') {
+      const home = coordinate(params.get('from')), place = coordinate(params.get('to'))
+      if (!home || !place) sendJson(response, 400, { error: 'Provide a home and a daily place' })
+      else sendJson(response, 200, await journeys.journeys({ home, place }), request)
       return true
     }
 
