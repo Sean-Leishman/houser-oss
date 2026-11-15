@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, Heart } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Heart, Trash2 } from 'lucide-react'
 import { dailyKinds, nearbyStops, nearestChains, OTHER_CHAIN, type AccessIndex, type PlaceChoices } from './access'
 import { formatDistance, walkingMinutes } from './geo'
 import { altModes, availability, homeRooms, kindLabels, modeLabels, money, modeVerbs, routeFacts, roomsLabel, timeAgo } from './format'
@@ -20,11 +20,12 @@ interface Props {
   choices: PlaceChoices
   saved?: SavedHome
   onBack: () => void
+  onRemove?: () => void
   onToggleSave: (listing: Listing) => void
   onUpdateSaved: (id: string, change: { status?: SavedStatus, note?: string }) => void
 }
 
-export default function ListingDetail({ busShown, listing, trip, route, altRoute, journeys, mode, anchor, accessIndex, choices, saved, onBack, onToggleSave, onUpdateSaved }: Props) {
+export default function ListingDetail({ busShown, listing, trip, route, altRoute, journeys, mode, anchor, accessIndex, choices, saved, onBack, onRemove, onToggleSave, onUpdateSaved }: Props) {
   const ModeIcon = modeIcons[mode]
   const stops = accessIndex ? nearbyStops(listing.coordinates, accessIndex) : []
   const daily = !accessIndex ? [] : dailyKinds.flatMap((kind) =>
@@ -54,8 +55,9 @@ export default function ListingDetail({ busShown, listing, trip, route, altRoute
     </div>
 
     <div className="detail-actions">
-      {listing.sourceUrl && <a className="button primary" href={listing.sourceUrl} target="_blank" rel="noreferrer">View on {listing.source} <ArrowUpRight size={16} aria-hidden /></a>}
+      {listing.sourceUrl && <a className="button primary" href={listing.sourceUrl} target="_blank" rel="noreferrer">{listing.id.startsWith('mine:') ? 'Open listing' : `View on ${listing.source}`} <ArrowUpRight size={16} aria-hidden /></a>}
       <button type="button" className={`button ${saved ? 'saved' : ''}`} aria-pressed={Boolean(saved)} onClick={() => onToggleSave(listing)}><Heart size={16} aria-hidden /> {saved ? 'Saved' : 'Save'}</button>
+      {onRemove && <button type="button" className="button subtle" onClick={() => { if (window.confirm('Remove this home you added?')) onRemove() }}><Trash2 size={16} aria-hidden /> Remove</button>}
     </div>
 
     {known.length > 0 && <dl className="facts">{known.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}

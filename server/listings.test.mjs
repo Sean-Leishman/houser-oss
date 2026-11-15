@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -46,5 +46,22 @@ test('every file in data/ is served for the city’s area, and coverage lists th
     assert.deepEqual(coverage.sources.map((source) => [source.file, source.count, source.skipped, Boolean(source.error)]),
       [['agency.json', 2, 0, false], ['my-list.json', 2, 1, false], ['notes.json', 0, 0, true]])
     assert.equal((await homes.getListings({ city: '', center: [8.5, 47.4] })).status, 400)
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
+test('homes added in the browser go to my-homes.json, are served like any file, and can be removed', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'houser-mine-'))
+  try {
+    const homes = createListingService({ dir, connectors: [] })
+    assert.equal(await homes.addHome({ coordinates: [8.53, 47.38], price: 0, currency: 'CHF' }), null)
+    const added = await homes.addHome({ id: 'agency:1', coordinates: [8.53, 47.38], price: 1800, currency: 'CHF', title: 'Loft', sourceUrl: 'https://example.com/1', image: 'javascript:x' })
+    assert.match(added.id, /^mine:/, 'the server picks the id')
+    assert.equal(added.source, 'My homes')
+    const stored = JSON.parse(await readFile(join(dir, 'my-homes.json'), 'utf8')).listings[0]
+    assert.equal(stored.image, undefined, 'values that fail validation are not written')
+    assert.deepEqual((await homes.getListings(zurich)).body.listings.map((listing) => listing.title), ['Loft'])
+    assert.equal(await homes.removeHome('mine:nope'), false)
+    assert.equal(await homes.removeHome(added.id), true)
+    assert.equal((await homes.getListings(zurich)).status, 503)
   } finally { await rm(dir, { recursive: true, force: true }) }
 })

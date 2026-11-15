@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, Crosshair, Info, MapPin, Pencil, RefreshCw, X } from 'lucide-react'
+import { ArrowUpRight, Crosshair, Info, MapPin, Pencil, Plus, RefreshCw, X } from 'lucide-react'
+import AddHome from './AddHome'
 import { accessForListings, chainColor, dailyKinds, indexTransit, nearLine, shownPlaces, type PlaceChoices } from './access'
-import { fetchChains, fetchCoverage, fetchJourneys, fetchLines, fetchListings, fetchParks, fetchPois, fetchReach, fetchRoute, fetchTrips, placeAt } from './api'
+import { fetchChains, fetchCoverage, fetchJourneys, fetchLines, fetchListings, fetchParks, fetchPois, fetchReach, fetchRoute, fetchTrips, placeAt, removeHome } from './api'
 import { distanceKm, estimateMinutes, inBounds, loadedArea, walkingMinutes } from './geo'
 import { altModes, kindLabels, modeLabels, modeVerbs, money, timeAgo } from './format'
 import { REACH_OPTIONS, placeCategories, transitModes, type PlaceCategory, type ReachMinutes } from './layers'
@@ -89,6 +90,7 @@ export default function App() {
   const [savedFilter, setSavedFilter] = useState<SavedStatus | 'all'>('all')
   const [picking, setPicking] = useState(false)
   const [editingAnchor, setEditingAnchor] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [sheet, setSheet] = useState<Sheet>('half')
   const { saved, toggle: toggleSaved, update: updateSaved, adoptLegacy } = useSavedHomes()
   const isMobile = useMedia('(max-width: 760px)')
@@ -314,6 +316,7 @@ export default function App() {
   const filtersActive = budget != null || minRooms > 0 || kinds.length > 0 || lineFilter != null || walkLimited
   const dropWalkLimits = () => setPlaceChoices({ supermarket: { ...placeChoices.supermarket, walk: false }, gym: { ...placeChoices.gym, walk: false } })
   const ModeIcon = modeIcons[mode]
+  const newHomeCurrency = housing.listings.length ? housing.currency : ({ GB: 'GBP', CH: 'CHF', US: 'USD' } as Record<string, string>)[city.countryCode ?? ''] ?? 'EUR'
 
   const quickFixes: { label: string, action: () => void }[] = []
   if (anchor && minutes < 60) quickFixes.push({ label: `Allow ${REACH_OPTIONS[REACH_OPTIONS.indexOf(minutes) + 1]} min`, action: () => setMinutes(REACH_OPTIONS[REACH_OPTIONS.indexOf(minutes) + 1]) })
@@ -328,6 +331,7 @@ export default function App() {
       <p><strong>{housing.state === 'error' ? 'Couldn’t load homes.' : `No homes found around ${city.name} yet.`}</strong></p>
       <p className="muted">{housing.state === 'error' ? housing.message : 'No stored homes here. You can still explore lines and places, or search the source directly:'}</p>
       <div className="empty-actions">
+        <button type="button" className="button primary" onClick={() => setAdding(true)}><Plus size={15} aria-hidden /> Add a home</button>
         {housing.state === 'error' && <button type="button" className="button" onClick={() => loadHousing()}><RefreshCw size={15} aria-hidden /> Try again</button>}
         {housing.sources.filter((source) => source.url).map((source) => <a key={source.name} className="button" href={source.url} target="_blank" rel="noreferrer">{source.name} <ArrowUpRight size={15} aria-hidden /></a>)}
       </div>
@@ -374,8 +378,10 @@ export default function App() {
       </header>
 
       <div className="panel-scroll" ref={scroller}>
-        {selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} altRoute={altRoute} journeys={journeys} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
-          saved={saved[selected.id]} onBack={closeDetail} onToggleSave={toggleSaved} onUpdateSaved={updateSaved} />
+        {adding ? <AddHome city={city} currency={newHomeCurrency} onBack={() => setAdding(false)}
+          onAdded={(listing) => { setAdding(false); setTab('homes'); loadHousing(); setSelectedId(listing.id) }} />
+          : selected ? <ListingDetail busShown={needBus} listing={selected} trip={tripOf(selected)} route={route} altRoute={altRoute} journeys={journeys} mode={mode} anchor={anchor} accessIndex={accessIndex} choices={placeChoices}
+          saved={saved[selected.id]} onBack={closeDetail} onRemove={selected.id.startsWith('mine:') ? () => removeHome(selected.id).then(() => { closeDetail(); loadHousing() }) : undefined} onToggleSave={toggleSaved} onUpdateSaved={updateSaved} />
           : <>
             <section className="trip" aria-labelledby="trip-title">
               <h2 id="trip-title" className="section-title">Where do you go every day?</h2>
@@ -434,6 +440,7 @@ export default function App() {
                 <button type="button" role="tab" aria-selected={tab === 'homes'} onClick={() => setTab('homes')}>Homes <small>{housing.state === 'loading' && !housing.listings.length ? '…' : visible.length}</small></button>
                 <button type="button" role="tab" aria-selected={tab === 'saved'} onClick={() => setTab('saved')}>Saved <small>{savedList.length}</small></button>
               </div>
+              {tab === 'homes' && housing.listings.length > 0 && <button type="button" className="button subtle" onClick={() => setAdding(true)}><Plus size={15} aria-hidden /> Add</button>}
               {tab === 'homes' && housing.listings.length > 0 && <label className="sort"><span className="visually-hidden">Sort homes</span>
                 <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>{sorts.map((item) => <option key={item.id} value={item.id} disabled={item.id === 'trip' && !anchor}>{item.label}</option>)}</select>
               </label>}

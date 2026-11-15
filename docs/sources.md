@@ -2,6 +2,10 @@
 
 Houser shows the homes in the JSON files in `data/`. It ships no listings and no connectors. `data/` is ignored by Git.
 
+## Add homes in the browser
+
+**Add a home** (in the home list, or the empty list) takes an address, the rent and, optionally, the type, rooms and a link to the listing. It saves to `data/my-homes.json`, a data file like any other below, so you can also edit it by hand. Homes added this way have a **Remove** button on their card. The address is placed approximately, at the street or building the address search found.
+
 ## Import a file
 
 ```json

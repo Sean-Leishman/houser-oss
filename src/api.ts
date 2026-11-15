@@ -1,4 +1,4 @@
-import type { Coordinates, Coverage, DailyPlace, HousingResponse, JourneySlot, LineSet, ParkPolygon, Place, Poi, ReachArea, Route, TravelMode } from './types'
+import type { Coordinates, Coverage, DailyPlace, HousingResponse, JourneySlot, Listing, LineSet, ParkPolygon, Place, Poi, ReachArea, Route, TravelMode } from './types'
 
 async function getJson<T>(url: URL | string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -58,6 +58,16 @@ export function fetchRoute(mode: Exclude<TravelMode, 'transit'>, from: Coordinat
   url.searchParams.set('from', from.join(','))
   url.searchParams.set('to', to.join(','))
   return getJson<Route>(url, { signal })
+}
+
+export const addHome = (home: Record<string, unknown>) => getJson<Listing>(api('/api/homes'), {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(home),
+})
+
+export function removeHome(id: string) {
+  const url = api('/api/homes')
+  url.searchParams.set('id', id)
+  return getJson<{ removed: string }>(url, { method: 'DELETE' })
 }
 
 export function fetchJourneys(from: Coordinates, to: Coordinates, signal: AbortSignal) {

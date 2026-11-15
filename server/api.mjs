@@ -91,6 +91,23 @@ export async function handleApi(request, response) {
       return true
     }
 
+    if (url.pathname === '/api/homes' && request.method === 'POST') {
+      const body = await readBody(request, 20_000)
+      let input = null
+      try { input = body && JSON.parse(body.toString('utf8')) } catch {}
+      const listing = input && typeof input === 'object' ? await homes.addHome(input) : null
+      if (!listing) sendJson(response, 400, { error: 'A home needs a place on the map, a monthly rent and a currency' })
+      else sendJson(response, 201, listing)
+      return true
+    }
+
+    if (url.pathname === '/api/homes' && request.method === 'DELETE') {
+      const id = params.get('id') || ''
+      if (!id.startsWith('mine:') || !(await homes.removeHome(id))) sendJson(response, 404, { error: 'Only homes you added can be removed' })
+      else sendJson(response, 200, { removed: id })
+      return true
+    }
+
     if (url.pathname === '/api/commute' && request.method === 'POST') {
       const body = await readBody(request, 200_000)
       let input = null

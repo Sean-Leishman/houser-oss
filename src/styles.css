@@ -191,6 +191,11 @@ small { font-size: 12.5px; }
 
 /* Home detail */
 .detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 12px 16px 24px; }
+.field { display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; min-width: 0; }
+.field input, .field select { height: 38px; width: 100%; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--raised); color: var(--ink); font: inherit; font-weight: 400; }
+.field-row { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
+.field-error { color: var(--accent); font-weight: 400; }
+.add-home h2 { font-size: 20px; }
 .back-button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 6px; border-radius: 6px; font-weight: 600; color: var(--ink-2); }
 .back-button:hover { background: var(--hover); color: var(--ink); }
 .detail-photo { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: var(--line); }

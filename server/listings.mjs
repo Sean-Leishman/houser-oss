@@ -42,6 +42,35 @@ export async function storeHomes(connector, listings, dir = dataDir) {
 
 export function createListingService({ dir = dataDir, connectors = registered } = {}) {
   let stored = { key: null, files: [] }
+  const mine = join(dir, 'my-homes.json')
+
+  // Homes added in the browser live in data/my-homes.json, an ordinary data file.
+  async function readMine() {
+    try { return JSON.parse(await readFile(mine, 'utf8')) } catch { return { source: 'My homes', listings: [] } }
+  }
+  async function writeMine(data) {
+    await mkdir(dir, { recursive: true })
+    await writeFile(`${mine}.tmp`, JSON.stringify(data, null, 2))
+    await rename(`${mine}.tmp`, mine)
+  }
+
+  async function addHome(input) {
+    const item = { ...input, id: `mine:${Date.now().toString(36)}` }
+    const listing = cleanListing(item, { source: 'My homes', fetchedAt: Date.now() })
+    if (!listing) return null
+    const data = await readMine()
+    const keep = Object.fromEntries(Object.entries(item).filter(([key]) => key in listing && listing[key] != null && listing[key] !== ''))
+    await writeMine({ ...data, listings: [...(Array.isArray(data.listings) ? data.listings : []), { ...keep, addedAt: new Date().toISOString() }] })
+    return listing
+  }
+
+  async function removeHome(id) {
+    const data = await readMine()
+    const listings = (data.listings ?? []).filter((item) => item?.id !== id)
+    if (listings.length === (data.listings ?? []).length) return false
+    await writeMine({ ...data, listings })
+    return true
+  }
 
   async function load() {
     const names = (await readdir(dir).catch(() => [])).filter((name) => name.endsWith('.json')).sort()
@@ -98,5 +127,5 @@ export function createListingService({ dir = dataDir, connectors = registered } 
       reason: listings.length ? undefined : `No stored homes around ${query.city}.` } }
   }
 
-  return { getListings, coverage }
+  return { getListings, coverage, addHome, removeHome }
 }

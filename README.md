@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Put a listings file in `data/`, or write a connector and run `npm run homes:fetch` ([docs/sources.md](docs/sources.md)). Then open the URL Vite prints.
+Click **Add a home** in the app, put a listings file in `data/`, or write a connector and run `npm run homes:fetch` ([docs/sources.md](docs/sources.md)). Then open the URL Vite prints.
 
 `npm run build && npm start` serves the production build and API on port 4173. `npm test` runs the server tests. Node.js 20.19+ or 22.12+. No API keys needed.
 
@@ -45,6 +45,8 @@ The public Overpass and Valhalla servers are for light use. For a public deploym
 | Endpoint | Returns |
 | --- | --- |
 | `GET /api/listings?city=&lon=&lat=` | Homes in the city's loaded area, with a count per source |
+| `POST /api/homes` | Add a home to `data/my-homes.json` (same fields as a listings file; the server picks the id) |
+| `DELETE /api/homes?id=` | Remove a home added that way |
 | `GET /api/sources` | Each file in `data/` with its homes, skipped entries and countries |
 | `GET /api/transit?part=rail\|bus\|chains\|pois\|parks&lon=&lat=` | Rail or bus lines with stops, supermarkets and gyms, other places, or parks for an area |
 | `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, quiet, car) |
