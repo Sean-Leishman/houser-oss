@@ -23,8 +23,8 @@ const noLines: LineSet = { features: [], stops: [] }
 const ZURICH: Place = { id: 'default-zurich', name: 'Zürich', detail: 'Zurich, Switzerland', coordinates: [8.5417, 47.3769], city: 'Zürich', countryCode: 'CH' }
 const travelModes: TravelMode[] = ['walk', 'bike', 'quiet', 'transit', 'car']
 const listingKinds: ListingKind[] = ['room', 'studio', 'apartment', 'house']
-type Sort = 'trip' | 'rent' | 'size' | 'rail'
-const sorts: { id: Sort, label: string }[] = [{ id: 'trip', label: 'Shortest trip' }, { id: 'rent', label: 'Lowest rent' }, { id: 'size', label: 'Most space' }, { id: 'rail', label: 'Nearest rail' }]
+type Sort = 'trip' | 'rent' | 'size' | 'rail' | 'food'
+const sorts: { id: Sort, label: string }[] = [{ id: 'trip', label: 'Shortest trip' }, { id: 'rent', label: 'Lowest rent' }, { id: 'size', label: 'Most space' }, { id: 'rail', label: 'Nearest rail' }, { id: 'food', label: 'Most local food' }]
 const BUDGET_MIN = 500
 const BUDGET_MAX = 6000
 const BUDGET_STEP = 100
@@ -151,13 +151,13 @@ export default function App() {
     return () => controller.abort()
   }, [cityKey, needBus, bus === null])
 
-  const needPois = places.some((category) => category !== 'parks')
+  // Places load whatever the map shows: local food shops are counted for every home.
   useEffect(() => {
-    if (!needPois || pois) return
+    if (pois) return
     const controller = new AbortController()
     fetchPois(city.coordinates, controller.signal).then(setPois).catch(() => {})
     return () => controller.abort()
-  }, [cityKey, needPois, pois === null])
+  }, [cityKey, pois === null])
 
   const showParks = places.includes('parks')
   useEffect(() => {
@@ -250,6 +250,7 @@ export default function App() {
         case 'trip': return tripOf(listing)?.minutes ?? Infinity
         case 'size': return -(listing.areaM2 ?? -Infinity)
         case 'rail': return access.get(listing.id)?.railKm ?? Infinity
+        case 'food': return -(access.get(listing.id)?.food ?? 0)
         default: return listing.price
       }
     }

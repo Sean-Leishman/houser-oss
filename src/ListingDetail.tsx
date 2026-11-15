@@ -1,6 +1,8 @@
-import { ArrowLeft, ArrowUpRight, Heart, Trash2 } from 'lucide-react'
-import { dailyKinds, nearbyStops, nearestChains, OTHER_CHAIN, type AccessIndex, type PlaceChoices } from './access'
-import { formatDistance, walkingMinutes } from './geo'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, ArrowUpRight, Carrot, Heart, Star, Trash2 } from 'lucide-react'
+import { fetchGyms, type RatedGym } from './api'
+import { dailyKinds, foodNear, nearbyStops, nearestChains, OTHER_CHAIN, type AccessIndex, type PlaceChoices } from './access'
+import { distanceKm, formatDistance, walkingMinutes } from './geo'
 import { altModes, availability, homeRooms, kindLabels, modeLabels, money, modeVerbs, routeFacts, roomsLabel, timeAgo } from './format'
 import LineBadge from './LineBadge'
 import { modeIcons, placeIcons } from './ListingCard'
@@ -25,11 +27,25 @@ interface Props {
   onUpdateSaved: (id: string, change: { status?: SavedStatus, note?: string }) => void
 }
 
+const foodLabels: Record<string, [string, string]> = {
+  greengrocer: ['greengrocer', 'greengrocers'], butcher: ['butcher', 'butchers'], bakery: ['bakery', 'bakeries'], pastry: ['patisserie', 'patisseries'],
+  deli: ['deli', 'delis'], cheese: ['cheese shop', 'cheese shops'], seafood: ['fishmonger', 'fishmongers'], marketplace: ['market', 'markets'],
+}
+
 export default function ListingDetail({ busShown, listing, trip, route, altRoute, journeys, mode, anchor, accessIndex, choices, saved, onBack, onRemove, onToggleSave, onUpdateSaved }: Props) {
   const ModeIcon = modeIcons[mode]
   const stops = accessIndex ? nearbyStops(listing.coordinates, accessIndex) : []
   const daily = !accessIndex ? [] : dailyKinds.flatMap((kind) =>
     nearestChains(listing.coordinates, accessIndex, kind, choices[kind].hidden).map((place) => ({ kind, place })))
+  const food = accessIndex ? foodNear(listing.coordinates, accessIndex) : []
+  const [gyms, setGyms] = useState<RatedGym[] | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    setGyms(null)
+    // Only answers when the server has a GOOGLE_MAPS_KEY; otherwise the section stays hidden.
+    fetchGyms(listing.coordinates, controller.signal).then((data) => setGyms(data.gyms)).catch(() => {})
+    return () => controller.abort()
+  }, [listing.id])
   // In transit mode the TfL 08:30 journey is the real door-to-door time.
   const planned = mode === 'transit' ? journeys?.find((slot) => slot.id === 'morning')?.journey : null
   const minutes = planned ? planned.door : route ? Math.round(route.duration / 60) : trip?.minutes
@@ -104,6 +120,26 @@ export default function ListingDetail({ busShown, listing, trip, route, altRoute
         </li>
       })}</ul>
       <p className="muted small">Straight-line distances. The map marks what’s within a 10-minute walk.</p>
+    </section>}
+
+    {accessIndex && <section className="detail-section">
+      <h3>Local food</h3>
+      {food.length
+        ? <p className="trip-line"><Carrot size={18} aria-hidden /><span>{food.map(([kind, count]) => `${count} ${foodLabels[kind]?.[count > 1 ? 1 : 0] ?? kind}`).join(' · ')}</span></p>
+        : <p className="muted">No greengrocers, butchers, bakers, fishmongers, delis or markets on the map within a 10-minute walk.</p>}
+      <p className="muted small">Within 800 m, from OpenStreetMap, so only what has been mapped.</p>
+    </section>}
+
+    {gyms && gyms.length > 0 && <section className="detail-section">
+      <h3>Gyms on Google</h3>
+      <ul className="place-list">{gyms.map((gym) => { const km = distanceKm(listing.coordinates, gym.coordinates)
+        return <li key={gym.id}>
+          <Star size={17} aria-hidden />
+          <span><strong>{gym.url ? <a href={gym.url} target="_blank" rel="noreferrer">{gym.name}</a> : gym.name}</strong>
+            <small>{gym.rating != null ? `${gym.rating.toFixed(1)} ★ · ${gym.reviews.toLocaleString('en')} reviews` : 'No rating yet'}</small></span>
+          <span className="muted">{formatDistance(km)} · {walkingMinutes(km)} min walk</span>
+        </li> })}</ul>
+      <p className="muted small">The five nearest gyms on Google Maps, with their star rating.</p>
     </section>}
 
     {saved && <section className="detail-section">

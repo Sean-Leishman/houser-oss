@@ -18,12 +18,15 @@ export function transitArea(longitude, latitude) {
 }
 
 export const poiCategories = {
-  shops: { shop: ['convenience', 'greengrocer', 'bakery', 'butcher', 'deli', 'cheese', 'seafood', 'kiosk', 'chemist', 'bicycle', 'hardware', 'doityourself'] },
+  shops: { shop: ['convenience', 'greengrocer', 'bakery', 'butcher', 'deli', 'cheese', 'seafood', 'pastry', 'kiosk', 'chemist', 'bicycle', 'hardware', 'doityourself'], amenity: ['marketplace'] },
   food: { amenity: ['cafe', 'restaurant', 'bar', 'pub', 'fast_food', 'ice_cream'] },
   sport: { leisure: ['sports_centre', 'swimming_pool'] },
   health: { amenity: ['pharmacy', 'doctors', 'clinic', 'hospital', 'dentist'] },
   schools: { amenity: ['school', 'kindergarten', 'university', 'college'] },
 }
+
+// Independent food shops (no brand tag, so GAIL's and Greggs don't count), counted per home: Peckham has 10 greengrocers within 800 m, Wembley none.
+export const localFood = ['greengrocer', 'butcher', 'bakery', 'pastry', 'deli', 'cheese', 'seafood', 'marketplace']
 
 function poiCategory(tags = {}) {
   for (const [category, rule] of Object.entries(poiCategories)) {
@@ -210,7 +213,8 @@ export function normalizeTransit(raw, bounds) {
       const brand = typeof element.tags.brand === 'string' && element.tags.brand.trim() ? element.tags.brand.trim() : null
       if (Number.isFinite(lon) && Number.isFinite(lat)) places.push({ kind, name: String(element.tags.name || brand || '').trim(), brand, coordinates: [round(lon), round(lat)] })
     } else if (category) {
-      if (Number.isFinite(lon) && Number.isFinite(lat)) pois.push({ category, name: String(element.tags.name || '').trim(), coordinates: [round(lon), round(lat)] })
+      if (Number.isFinite(lon) && Number.isFinite(lat)) pois.push({ category, name: String(element.tags.name || '').trim(), coordinates: [round(lon), round(lat)],
+        ...(!element.tags.brand && localFood.includes(element.tags.shop ?? element.tags.amenity) ? { food: element.tags.shop ?? element.tags.amenity } : {}) })
     } else if (element.type === 'way') ways.set(element.id, element.geometry)
     else if (element.type === 'node') nodes.set(element.id, element)
   }
@@ -265,7 +269,7 @@ export function normalizeTransit(raw, bounds) {
 export function createTransitService({ fetchImpl = fetch, cacheDir, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   endpoint = process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter', concurrency = 2 } = {}) {
   const caches = Object.fromEntries(transitParts.map((part) =>
-    [part, createLocationCache({ namespace: `${part}-v2`, ttlMs: 7 * 24 * HOUR, staleMs: 30 * 24 * HOUR, cacheDir, now, revalidate: true })]))
+    [part, createLocationCache({ namespace: `${part}-${part === 'pois' ? 'v3' : 'v2'}`, ttlMs: 7 * 24 * HOUR, staleMs: 30 * 24 * HOUR, cacheDir, now, revalidate: true })]))
   const queue = []
   let active = 0
   let blockedUntil = 0

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 import { createJourneyService } from './journeys.mjs'
 import { createListingService } from './listings.mjs'
+import { createRatingService } from './ratings.mjs'
 import { createRoutingService, routingModes, validPoint } from './routing.mjs'
 import { createTransitService, transitParts } from './transit.mjs'
 
@@ -12,6 +13,7 @@ const homes = createListingService()
 const getTransit = createTransitService()
 const routing = createRoutingService()
 const journeys = createJourneyService()
+const ratings = createRatingService()
 
 function sendJson(response, status, body, request) {
   const json = JSON.stringify(body)
@@ -130,6 +132,14 @@ export async function handleApi(request, response) {
       const home = coordinate(params.get('from')), place = coordinate(params.get('to'))
       if (!home || !place) sendJson(response, 400, { error: 'Provide a home and a daily place' })
       else sendJson(response, 200, await journeys.journeys({ home, place }), request)
+      return true
+    }
+
+    if (url.pathname === '/api/gyms' && request.method === 'GET') {
+      const at = coordinate(params.get('at'))
+      if (!ratings.enabled) sendJson(response, 501, { error: 'Set GOOGLE_MAPS_KEY to see gym ratings' })
+      else if (!at) sendJson(response, 400, { error: 'Provide a home' })
+      else sendJson(response, 200, { gyms: await ratings.gyms(at), source: 'Google' })
       return true
     }
 

@@ -24,6 +24,8 @@ Click **Add a home** in the app, put a listings file in `data/`, or write a conn
 - Home cards with rent, details, trip time, nearest lines and stops, and nearest supermarket and gym.
 - Filters for rent, rooms, type, homes near a line, and homes within a 10-minute walk of a chosen supermarket or gym chain.
 - Map layers for rail, metro, tram and bus lines, shops, food, sports, health, schools, parks, and supermarket and gym chains.
+- A count of independent food shops (greengrocers, butchers, bakers, fishmongers, delis, markets; chains with a brand tag left out) within a 10-minute walk of each home, with a "Most local food" sort.
+- Optional Google star ratings for the five gyms nearest a home, with `GOOGLE_MAPS_KEY` in `.env`.
 - Saved homes with a status and notes, kept in the browser.
 
 ## Data
@@ -51,6 +53,7 @@ The public Overpass and Valhalla servers are for light use. For a public deploym
 | `GET /api/transit?part=rail\|bus\|chains\|pois\|parks&lon=&lat=` | Rail or bus lines with stops, supermarkets and gyms, other places, or parks for an area |
 | `POST /api/commute` `{ mode, to, from: [[lon, lat], …] }` | Travel seconds and kilometres from up to 500 origins to one destination (walk, bike, quiet, car) |
 | `GET /api/reach?mode=&lon=&lat=` | Areas reachable in 15, 30, 45 and 60 minutes |
+| `GET /api/gyms?at=lon,lat` | The five nearest gyms on Google Maps with star rating and review count. Only with `GOOGLE_MAPS_KEY`; 501 without |
 | `GET /api/journeys?from=lon,lat&to=lon,lat` | Public transport from a home to a daily place on a weekday at 08:30, and back home at 22:00, 01:30 on a weekday night and 01:30 on Friday night: arrival, wait, walk, ride and lines |
 | `GET /api/route?mode=&from=lon,lat&to=lon,lat` | Duration, distance and route geometry, with metres of climb and descent for walk and bike, and the share on main roads for bike and quiet |
 

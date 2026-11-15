@@ -1,12 +1,20 @@
 import { GridIndex } from './geo'
 import { chainPalette, independentColor } from './layers'
-import type { Coordinates, DailyKind, DailyPlace, Listing, TransitData, TransitLine, TransitMode, TransitStop } from './types'
+import type { Coordinates, DailyKind, DailyPlace, Listing, Poi, TransitData, TransitLine, TransitMode, TransitStop } from './types'
 
 export const modeOrder: TransitMode[] = ['train', 'metro', 'tram', 'bus']
 const rank = (mode: TransitMode) => modeOrder.indexOf(mode)
 
 export const dailyKinds: DailyKind[] = ['supermarket', 'gym']
 export const OTHER_CHAIN = 'Independent'
+// Local food shops count within a 10-minute walk (about 800 m).
+export const FOOD_KM = .8
+
+export function foodNear(point: Coordinates, index: AccessIndex) {
+  const counts = new Map<string, number>()
+  for (const { item } of index.food.near(point, FOOD_KM)) counts.set(item.food!, (counts.get(item.food!) ?? 0) + 1)
+  return [...counts].sort((a, b) => b[1] - a[1])
+}
 
 export interface PlaceChoice { hidden: string[], walk: boolean }
 export type PlaceChoices = Record<DailyKind, PlaceChoice>
@@ -22,6 +30,7 @@ export interface Access {
   lines: LineNearby[]
   railKm: number | null
   nearest: Partial<Record<DailyKind, NearestPlace>>
+  food: number
 }
 
 export interface AccessIndex {
@@ -30,6 +39,7 @@ export interface AccessIndex {
   placeList: Record<DailyKind, ChainPlace[]>
   chains: Record<DailyKind, ChainCount[]>
   colors: Record<DailyKind, Map<string, string>>
+  food: GridIndex<Poi>
   transit: TransitData
 }
 
@@ -79,7 +89,8 @@ export function indexTransit(transit: TransitData): AccessIndex {
     const offset = kind === 'gym' ? chainPalette.length / 2 : 0
     colors[kind] = new Map(chains[kind].filter(({ chain }) => chain !== OTHER_CHAIN).map(({ chain }, position) => [chain, chainPalette[(position + offset) % chainPalette.length]]))
   }
-  return { stops: new GridIndex(transit.stops, (stop) => stop.coordinates), places, placeList, chains, colors, transit }
+  return { stops: new GridIndex(transit.stops, (stop) => stop.coordinates), places, placeList, chains, colors, transit,
+    food: new GridIndex(transit.pois.filter((poi) => poi.food), (poi) => poi.coordinates) }
 }
 
 function uniqueLines(indexes: number[], transit: TransitData) {
@@ -136,7 +147,7 @@ export function accessFor(point: Coordinates, index: AccessIndex, choices: Place
     const hit = index.places[kind].near(point, 2).find(({ item }) => !hidden.includes(item.chain))
     if (hit) nearest[kind] = { name: hit.item.name || hit.item.chain, chain: hit.item.chain, km: hit.km, color: chainColor(index, kind, hit.item.chain) }
   }
-  return { lines, railKm: rail.length ? Math.min(...rail) : null, nearest }
+  return { lines, railKm: rail.length ? Math.min(...rail) : null, nearest, food: index.food.near(point, FOOD_KM).length }
 }
 
 export function accessForListings(listings: Listing[], index: AccessIndex | null, choices: PlaceChoices): Map<string, Access> {

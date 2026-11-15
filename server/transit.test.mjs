@@ -19,6 +19,9 @@ const raw = { elements: [
   { type: 'node', id: 202, lat: 52.515, lon: 13.415, tags: { leisure: 'fitness_centre', name: 'Big Gym Mitte', brand: 'Big Gym' } },
   { type: 'node', id: 203, lat: 52.516, lon: 13.416, tags: { amenity: 'cafe', name: 'Corner Café' } },
   { type: 'way', id: 204, center: { lat: 52.517, lon: 13.417 }, tags: { amenity: 'school', name: 'North School' } },
+  { type: 'node', id: 205, lat: 52.518, lon: 13.418, tags: { shop: 'greengrocer', name: 'Veg' } },
+  { type: 'node', id: 206, lat: 52.519, lon: 13.419, tags: { amenity: 'marketplace', name: 'Market Square' } },
+  { type: 'node', id: 207, lat: 52.52, lon: 13.42, tags: { shop: 'bakery', name: 'Chain Bakery 12', brand: 'Chain Bakery' } },
 ] }
 
 test('route variants share a line and clipped geometry never joins across missing points', () => {
@@ -44,7 +47,8 @@ test('stop positions, platforms and town-prefixed names merge into one stop with
   assert.equal(data.features[0].properties.night, false)
   assert.deepEqual(data.places.map(({ kind, name, brand }) => [kind, name, brand]),
     [['supermarket', 'Corner Grocer', null], ['supermarket', 'Big Shop', 'Big Shop'], ['gym', 'Big Gym Mitte', 'Big Gym']])
-  assert.deepEqual(data.pois.map(({ category, name }) => [category, name]), [['food', 'Corner Café'], ['schools', 'North School']])
+  assert.deepEqual(data.pois.map(({ category, name, food }) => [category, name, food]),
+    [['food', 'Corner Café', undefined], ['schools', 'North School', undefined], ['shops', 'Veg', 'greengrocer'], ['shops', 'Market Square', 'marketplace'], ['shops', 'Chain Bakery 12', undefined]], 'a café is food but not a food shop, a chain bakery is not local')
 })
 
 test('simplification drops vertices within tolerance and keeps real corners', () => {

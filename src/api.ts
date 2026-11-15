@@ -70,6 +70,13 @@ export function removeHome(id: string) {
   return getJson<{ removed: string }>(url, { method: 'DELETE' })
 }
 
+export interface RatedGym { id: string, name: string, rating: number | null, reviews: number, coordinates: Coordinates, url: string | null }
+export function fetchGyms(at: Coordinates, signal: AbortSignal) {
+  const url = api('/api/gyms')
+  url.searchParams.set('at', at.join(','))
+  return getJson<{ gyms: RatedGym[] }>(url, { signal })
+}
+
 export function fetchJourneys(from: Coordinates, to: Coordinates, signal: AbortSignal) {
   const url = api('/api/journeys')
   url.searchParams.set('from', from.join(','))

@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Bike, CarFront, Dumbbell, Footprints, Heart, House, Leaf, ShoppingBasket, TramFront } from 'lucide-react'
+import { Bike, CarFront, Carrot, Dumbbell, Footprints, Heart, House, Leaf, ShoppingBasket, TramFront } from 'lucide-react'
 import { cardLines, dailyKinds, OTHER_CHAIN, type Access } from './access'
 import { formatDistance } from './geo'
 import { availability, listingFacts, money } from './format'
@@ -39,6 +39,7 @@ function ListingCard({ listing, trip, mode, access, lineModes, saved, status, se
         <span className="card-data">
           {trip && <span className="card-trip" title={trip.routed ? 'Routed trip time' : 'Estimated from distance'}><ModeIcon size={14} aria-hidden />{trip.routed ? '' : '≈'}{trip.minutes} min</span>}
           {cardLines(access, 2, lineModes).map((entry) => <span key={entry.index} className="line-near"><LineBadge line={entry.line} />{formatDistance(entry.km)}</span>)}
+          {access && access.food > 0 && <span className="place-near" title="Greengrocers, butchers, bakers, fishmongers, delis and markets within a 10-minute walk"><Carrot size={14} aria-hidden />{access.food} food shops</span>}
           {dailyKinds.map((kind) => {
             const place = access?.nearest[kind]
             if (!place) return null

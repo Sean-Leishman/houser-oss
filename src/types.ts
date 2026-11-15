@@ -89,6 +89,7 @@ export interface Poi {
   category: PoiCategory
   name: string
   coordinates: Coordinates
+  food?: string
 }
 
 export interface DailyPlace {
