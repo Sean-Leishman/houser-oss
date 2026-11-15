@@ -29,8 +29,10 @@ export default function ListingDetail({ busShown, listing, trip, route, altRoute
   const stops = accessIndex ? nearbyStops(listing.coordinates, accessIndex) : []
   const daily = !accessIndex ? [] : dailyKinds.flatMap((kind) =>
     nearestChains(listing.coordinates, accessIndex, kind, choices[kind].hidden).map((place) => ({ kind, place })))
-  const minutes = route ? Math.round(route.duration / 60) : trip?.minutes
-  const routed = Boolean(route) || Boolean(trip?.routed)
+  // In transit mode the TfL 08:30 journey is the real door-to-door time.
+  const planned = mode === 'transit' ? journeys?.find((slot) => slot.id === 'morning')?.journey : null
+  const minutes = planned ? planned.door : route ? Math.round(route.duration / 60) : trip?.minutes
+  const routed = Boolean(planned) || Boolean(route) || Boolean(trip?.routed)
   const facts: [string, string][] = [
     ['Type', listing.kind ? kindLabels[listing.kind] : ''],
     ['Rooms', homeRooms(listing) ? roomsLabel(homeRooms(listing)!) : ''],
@@ -62,6 +64,7 @@ export default function ListingDetail({ busShown, listing, trip, route, altRoute
       <h3>Your trip</h3>
       {anchor && minutes != null
         ? <p className="trip-line"><ModeIcon size={18} aria-hidden /><span><strong>{routed ? '' : '≈ '}{minutes} min</strong> {modeVerbs[mode]} to {anchor.name}
+          {planned && <small> · weekday 08:30 from TfL</small>}
           {route && <small>{routeFacts(route)}</small>}
           {altRoute && <small className="block">{modeLabels[altModes[mode]!]} route: {Math.round(altRoute.duration / 60)} min{routeFacts(altRoute)} (dashed on the map)</small>}
           {!routed && <small className="block">{mode === 'transit' ? 'Rough estimate from distance. Check the operator’s journey planner.' : 'Estimate from distance. Routed times cover the 500 homes nearest your place.'}</small>}</span></p>
