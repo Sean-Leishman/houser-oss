@@ -125,3 +125,21 @@ test('a busy Overpass is waited for, using its status page, before the query is 
     assert.equal(slotWaitSeconds('unexpected'), null)
   } finally { await rm(cacheDir, { recursive: true, force: true }) }
 })
+
+test('an Overpass at capacity or unreachable hands the query to the next server', async () => {
+  const cacheDir = await mkdtemp(join(tmpdir(), 'houser-transit-'))
+  const asked = []
+  const fetchImpl = async (url) => {
+    asked.push(new URL(url).host)
+    if (url.includes('busy')) return new Response('at capacity', { status: 502 })
+    if (url.includes('down')) throw new TypeError('fetch failed')
+    return Response.json(raw)
+  }
+  try {
+    const endpoints = ['https://busy.test/api/interpreter', 'https://down.test/api/interpreter', 'https://mirror.test/api/interpreter']
+    const rail = await createTransitService({ cacheDir, fetchImpl, endpoints })('bus', 13.4, 52.5)
+    assert.deepEqual(asked, ['busy.test', 'down.test', 'mirror.test'])
+    assert.equal(rail.features.length, 2)
+    await assert.rejects(createTransitService({ cacheDir, fetchImpl, endpoints: ['https://busy.test/api/interpreter'] })('rail', 13.4, 52.5), /502/)
+  } finally { await rm(cacheDir, { recursive: true, force: true }) }
+})

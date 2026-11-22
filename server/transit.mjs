@@ -267,7 +267,8 @@ export function normalizeTransit(raw, bounds) {
 }
 
 export function createTransitService({ fetchImpl = fetch, cacheDir, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-  endpoint = process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter', concurrency = 2 } = {}) {
+  endpoints = (process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter').split(','),
+  concurrency = 2 } = {}) {
   const caches = Object.fromEntries(transitParts.map((part) =>
     [part, createLocationCache({ namespace: `${part}-${part === 'pois' ? 'v3' : 'v2'}`, ttlMs: 7 * 24 * HOUR, staleMs: 30 * 24 * HOUR, cacheDir, now, revalidate: true })]))
   const queue = []
@@ -285,7 +286,7 @@ export function createTransitService({ fetchImpl = fetch, cacheDir, now = Date.n
     return new Promise((resolve, reject) => { queue.push({ task, resolve, reject }); drain() })
   }
 
-  async function slotDelayMs() {
+  async function slotDelayMs(endpoint) {
     try {
       const response = await fetchImpl(endpoint.replace(/interpreter\/?$/, 'status'), { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(10_000) })
       const seconds = response.ok ? slotWaitSeconds(await response.text()) : null
@@ -296,13 +297,17 @@ export function createTransitService({ fetchImpl = fetch, cacheDir, now = Date.n
   function collect(part, bounds) {
     return schedule(async () => {
       if (now() < blockedUntil) throw new Error('Transit source is busy. Please retry in a minute.')
-      for (let attempt = 0; ; attempt++) {
+      // overpass-api.de is often at capacity (502 on 2026-11-15 and 2026-11-22), so a busy or unreachable server
+      // hands the query to the next one in the list.
+      for (let attempt = 0, server = 0; ; attempt++) {
+        const endpoint = endpoints[server].trim()
         const response = await fetchImpl(endpoint, {
           method: 'POST', body: new URLSearchParams({ data: partQuery(part, bounds) }),
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': USER_AGENT },
           signal: AbortSignal.timeout(100_000),
-        })
-        if (response.status === 429 && attempt < 2) { await wait(await slotDelayMs()); continue }
+        }).catch((error) => { if (server + 1 < endpoints.length) return null; throw error })
+        if ((!response || [502, 503, 504].includes(response.status)) && server + 1 < endpoints.length) { server++; continue }
+        if (response.status === 429 && attempt < 2) { await wait(await slotDelayMs(endpoint)); continue }
         if (response.status === 429 || response.status === 406) blockedUntil = now() + 30_000
         const raw = await readJson(response, 250_000_000)
         if (part === 'parks') return { parks: normalizeParks(raw) }
