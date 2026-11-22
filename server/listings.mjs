@@ -109,10 +109,9 @@ export function createListingService({ dir = dataDir, connectors = registered } 
       return { status: 400, body: { mode: 'unavailable', reason: 'A city and valid coordinates are required' } }
     }
     const files = await load()
-    if (!files.some((file) => file.listings.length)) {
-      return { status: 503, body: { mode: 'unavailable', sources: [], reason: files.find((file) => file.error)?.error
-        ?? 'No homes are stored yet. Run npm run homes:fetch, or add your own file to data/ (see docs/sources.md).' } }
-    }
+    // No homes yet is a normal start (add one in the browser); only a broken file is an error.
+    const broken = files.find((file) => file.error)
+    if (broken && !files.some((file) => file.listings.length)) return { status: 503, body: { mode: 'unavailable', sources: [], reason: broken.error } }
     const { bounds } = transitArea(query.center[0], query.center[1])
     const [west, south, east, north] = bounds
     const inArea = ({ coordinates: [lon, lat] }) => lon >= west && lon <= east && lat >= south && lat <= north

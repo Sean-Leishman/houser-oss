@@ -27,8 +27,8 @@ test('every file in data/ is served for the city’s area, and coverage lists th
     const agency = { id: 'agency', name: 'Agency', searchUrl: ([west, south, east, north]) => `https://agency.test/search?bbox=${west},${south},${east},${north}` }
     const homes = createListingService({ dir, connectors: [agency] })
     const empty = await homes.getListings(zurich)
-    assert.equal(empty.status, 503)
-    assert.match(empty.body.reason, /npm run homes:fetch/)
+    assert.equal(empty.status, 200, 'no homes yet is not an error')
+    assert.deepEqual(empty.body.listings, [])
 
     await storeHomes(agency, [home('agency:1', { country: 'CH' }), home('agency:2', { country: 'CH', coordinates: [6.1432, 46.2044] })], dir)
     await writeFile(join(dir, 'my-list.json'), JSON.stringify({ source: 'My list', fetchedAt: '2026-09-20T08:00:00Z', country: 'CH',
@@ -62,6 +62,6 @@ test('homes added in the browser go to my-homes.json, are served like any file, 
     assert.deepEqual((await homes.getListings(zurich)).body.listings.map((listing) => listing.title), ['Loft'])
     assert.equal(await homes.removeHome('mine:nope'), false)
     assert.equal(await homes.removeHome(added.id), true)
-    assert.equal((await homes.getListings(zurich)).status, 503)
+    assert.deepEqual((await homes.getListings(zurich)).body.listings, [])
   } finally { await rm(dir, { recursive: true, force: true }) }
 })

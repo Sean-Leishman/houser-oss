@@ -330,7 +330,7 @@ export default function App() {
     if (housing.state === 'loading' && !housing.listings.length) return <div className="card-skeletons" aria-label="Loading homes">{[0, 1, 2].map((item) => <div key={item} className="card-skeleton" />)}</div>
     if (!housing.listings.length) return <div className="empty">
       <p><strong>{housing.state === 'error' ? 'Couldn’t load homes.' : `No homes found around ${city.name} yet.`}</strong></p>
-      <p className="muted">{housing.state === 'error' ? housing.message : 'No stored homes here. You can still explore lines and places, or search the source directly:'}</p>
+      <p className="muted">{housing.state === 'error' ? housing.message : `Add one you’ve found, or explore lines and places${housing.sources.some((source) => source.url) ? ', or search the source directly:' : '.'}`}</p>
       <div className="empty-actions">
         <button type="button" className="button primary" onClick={() => setAdding(true)}><Plus size={15} aria-hidden /> Add a home</button>
         {housing.state === 'error' && <button type="button" className="button" onClick={() => loadHousing()}><RefreshCw size={15} aria-hidden /> Try again</button>}
