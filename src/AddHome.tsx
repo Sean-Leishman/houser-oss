@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ArrowLeft, MapPin, X } from 'lucide-react'
 import { addHome } from './api'
 import { kindLabels } from './format'
-import { distanceKm } from './geo'
+import { ADD_HOME_MAX_KM, distanceKm } from './geo'
 import PlaceSearch from './PlaceSearch'
 import type { Listing, ListingKind, Place } from './types'
 
@@ -26,7 +26,7 @@ export default function AddHome({ city, currency: cityCurrency, onBack, onAdded 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   // Homes are served for the area around the city centre, so a far pick would vanish on save.
-  const far = place != null && distanceKm(place.coordinates, city.coordinates) > 10
+  const far = place != null && distanceKm(place.coordinates, city.coordinates) > ADD_HOME_MAX_KM
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -55,7 +55,7 @@ export default function AddHome({ city, currency: cityCurrency, onBack, onAdded 
         ? <div className="anchor-row"><MapPin size={18} aria-hidden /><span className="anchor-text"><strong>{place.name}</strong>{place.detail && <small>{place.detail}</small>}</span>
           <button type="button" className="icon-button" aria-label="Change address" onClick={() => setPlace(null)}><X size={16} aria-hidden /></button></div>
         : <PlaceSearch label="Address of the home" placeholder="Street, postcode or building…" near={city.coordinates} autoFocus onPick={setPlace} />}
-      {far && <small className="field-error">That is more than 10 km from {city.name}. Change the city first to add a home there.</small>}
+      {far && <small className="field-error">That is more than {ADD_HOME_MAX_KM} km from {city.name}. Change the city first to add a home there.</small>}
     </div>
     <div className="field-row">
       <label className="field"><span>Rent per month</span><input type="number" min="1" step="any" inputMode="decimal" required value={price} onChange={(event) => setPrice(event.target.value)} /></label>

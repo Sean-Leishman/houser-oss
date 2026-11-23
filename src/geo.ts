@@ -71,7 +71,15 @@ const snapped = ([lon, lat]: Coordinates): Coordinates => [Math.round(lon * 20) 
 
 export const cityView = (center: Coordinates) => cityBox(center, .06)
 
-export const loadedArea = (center: Coordinates) => cityBox(snapped(center), .1)
+// Half-height in degrees of the area loaded around a city (±0.19° ≈ ±21 km: London reaches High Barnet).
+// Must match AREA_HALF_DEG in server/transit.mjs, which queries and caches that same area.
+export const AREA_HALF_DEG = .19
+
+// Homes further than this from the city centre may fall outside the loaded area (the area is
+// centred on the snapped centre, up to ~3 km off), so adding one is refused.
+export const ADD_HOME_MAX_KM = 18
+
+export const loadedArea = (center: Coordinates) => cityBox(snapped(center), AREA_HALF_DEG)
 
 export const inBounds = ([lon, lat]: Coordinates, [west, south, east, north]: Bounds) => lon >= west && lon <= east && lat >= south && lat <= north
 

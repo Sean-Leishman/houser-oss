@@ -7,14 +7,18 @@ const stopTags = (tags = {}) => ['stop_position', 'platform', 'station'].include
   ['bus_stop', 'tram_stop'].includes(tags.highway) || ['station', 'halt', 'stop', 'tram_stop', 'platform'].includes(tags.railway)
 const round = (value) => Math.round(value * 1e5) / 1e5
 
+// Must match AREA_HALF_DEG in src/geo.ts. It is part of the cache key, so changing it
+// refetches instead of serving the old, smaller area from .cache/ for 7 days.
+export const AREA_HALF_DEG = .19
+
 export function transitArea(longitude, latitude) {
   if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || Math.abs(longitude) > 180 || Math.abs(latitude) > 85) throw new Error('Invalid transit search coordinates')
   const lat = Math.round(latitude * 20) / 20
   const lon = Math.round(longitude * 20) / 20
-  const dy = .1
+  const dy = AREA_HALF_DEG
   const dx = Math.min(1.5, dy / Math.cos(lat * Math.PI / 180))
   const bounds = [Math.max(-180, lon - dx), Math.max(-85, lat - dy), Math.min(180, lon + dx), Math.min(85, lat + dy)].map((n) => Number(n.toFixed(5)))
-  return { key: `${lon}:${lat}`, bounds }
+  return { key: `${lon}:${lat}:${dy}`, bounds }
 }
 
 export const poiCategories = {

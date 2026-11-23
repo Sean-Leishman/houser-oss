@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { countBusLines, createTransitService, normalizeParks, normalizeTransit, partQuery, simplifyPath, slotWaitSeconds, transitArea } from './transit.mjs'
+import { countBusLines, createTransitService, normalizeParks, normalizeTransit, partQuery, simplifyPath, slotWaitSeconds, transitArea, AREA_HALF_DEG } from './transit.mjs'
 
 const raw = { elements: [
   { type: 'relation', id: 1, tags: { type: 'route', route: 'tram', ref: 'M1', network: 'City', name: 'City tram' },
@@ -34,7 +34,8 @@ test('route variants share a line and clipped geometry never joins across missin
   assert.throws(() => transitArea(13, 100))
   assert.notEqual(transitArea(13.4, 52.5).key, transitArea(139.69, 35.69).key)
   const { bounds } = transitArea(4.8952, 52.3702)
-  assert.deepEqual([bounds[1], bounds[3]], [52.25, 52.45])
+  // Centre snaps to 0.05°, so 52.3702 -> 52.35, then ±AREA_HALF_DEG.
+  assert.deepEqual([bounds[1], bounds[3]], [Number((52.35 - AREA_HALF_DEG).toFixed(5)), Number((52.35 + AREA_HALF_DEG).toFixed(5))])
   assert.ok(bounds[0] < 4.9 - .08 / Math.cos(52.35 * Math.PI / 180) - .02)
 })
 
